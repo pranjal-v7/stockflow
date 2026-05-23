@@ -1,13 +1,147 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  WAREHOUSE_MANAGER
+  ADMIN
+  DELIVERY_AGENT
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+  EXPIRED
+}
+
+enum OrderStatus {
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reservations  Reservation[]
+  orders        Order[]         @relation("CustomerOrders")
+  deliveries    Order[]         @relation("DeliveryAgentOrders")
+}
+
+// ─────────────────────────────────────────
+// PRODUCT
+// ─────────────────────────────────────────
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  sku         String   @unique
+  description String?
+  price       Float
+  category    String
+  images      String[] // Array of image URLs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stockEntries  StockEntry[]
+  reservations  Reservation[]
+}
+
+// ─────────────────────────────────────────
+// WAREHOUSE
+// ─────────────────────────────────────────
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stockEntries  StockEntry[]
+  reservations  Reservation[]
+}
+
+// ─────────────────────────────────────────
+// STOCK ENTRY (product × warehouse)
+// ─────────────────────────────────────────
+
+model StockEntry {
+  id             String    @id @default(cuid())
+  productId      String
+  warehouseId    String
+  totalUnits     Int       @default(0)
+  reservedUnits  Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse  Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+}
+
+// ─────────────────────────────────────────
+// RESERVATION
+// ─────────────────────────────────────────
+
+model Reservation {
+  id          String            @id @default(cuid())
+  userId      String
+  productId   String
+  warehouseId String
+  qty         Int
+  status      ReservationStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  order     Order?
+}
+
+// ─────────────────────────────────────────
+// ORDER
+// ─────────────────────────────────────────
+
+model Order {
+  id              String      @id @default(cuid())
+  reservationId   String      @unique
+  customerId      String
+  deliveryAgentId String?
+  status          OrderStatus @default(CONFIRMED)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  reservation    Reservation @relation(fields: [reservationId], references: [id])
+  customer       User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  deliveryAgent  User?       @relation("DeliveryAgentOrders", fields: [deliveryAgentId], references: [id])
 }
