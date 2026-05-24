@@ -139,11 +139,47 @@ Admin Monitoring Dashboard (live metrics, stock alerts, expiry stats)
 
 ---
 
+## Trade-offs & Production Architectural Considerations
+
+In building StockFlow, several architectural choices were made to optimize consistency, speed, and real-time user experience. In a massive-scale production environment, we would consider the following trade-offs and future adjustments:
+
+### 1. Database Locking (`SELECT FOR UPDATE`) vs. Optimistic Locking vs. Distributed Locking
+*   **Current Approach**: To guarantee absolute consistency and prevent overselling, we acquire a row-level lock on `StockEntry` (`SELECT FOR UPDATE`) inside a Prisma `$transaction` during reservation creation.
+*   **Trade-off**: This is highly consistent and simple to reason about. However, row locking holds PostgreSQL connections active during transaction execution. During high-concurrency flash sales for hot products, this can lead to connection pool exhaustion, transaction timeouts, and high database CPU load.
+*   **Production Improvement**:
+    *   **Pessimistic Redis Counters**: Use `DECRBY` on atomic Redis keys representing available stock to handle the initial inventory filter *before* reaching the database. If Redis returns $< 0$, return `409` immediately. If it returns $\ge 0$, proceed to asynchronously record the DB reservation.
+    *   **Optimistic Locking**: Add a `version` column to the `StockEntry` model. Perform updates with `WHERE id = :id AND version = :current_version` and use a retry loop on conflict. This avoids persistent database-level row locks and scales better for high read-to-write ratios.
+
+### 2. Auto-Expiry Expiration: Vercel Cron vs. Message Queues (Exact-Second Releases)
+*   **Current Approach**: A Vercel Cron job runs every 1 minute to identify `PENDING` reservations that have exceeded their `expiresAt` timestamp, setting them to `EXPIRED` and restoring stock.
+*   **Trade-off**: While robust, the 1-minute cron granularity means an expired reservation may sit inactive for up to 59 seconds before the next cron runs and restores its stock. In addition, cron-based database scanning is a recurring poll query that adds constant overhead.
+*   **Production Improvement**:
+    *   **Distributed Delay Queues**: Utilize a message broker or queueing system (e.g., BullMQ, AWS SQS, or QStash) to schedule a delayed task at the exact second of reservation creation ($+15$ minutes). When the message is consumed, we check if the reservation is still `PENDING`, and if so, release it.
+    *   **Redis Keyspace Notifications**: Save a temporary reservation key in Redis with a 15-minute TTL. Enable key-event notifications so that when the key expires, a background service receives an event and atomically executes the release SQL query.
+
+### 3. Idempotency Cache: Upstash Redis vs. Relational DB Transactions
+*   **Current Approach**: We check the `Idempotency-Key` header against Upstash Redis using a 24-hour TTL, saving the response payload to Redis on success.
+*   **Trade-off**: This is extremely fast and prevents API processing on duplicate requests. However, it introduces an external caching dependency. If Redis experiences a networking blip, the idempotency layer might fail open or closed, risking duplicate processing.
+*   **Production Improvement**:
+    *   **Transactional Idempotency Table**: Create an `IdempotentRequests` table inside PostgreSQL. The creation of the reservation and the insertion of the idempotency key run inside the *same* database transaction. This ensures strict atomic commitment (the idempotency key is saved if and only if the reservation succeeds).
+
+### 4. Client-side Countdown vs. Server-side Expiration
+*   **Current Approach**: The frontend uses `useEffect` and `setInterval` to tick down the time remaining per item. If the timer hits zero, the client automatically calls `/api/reservations/[id]/release` to release the stock instantly.
+*   **Trade-off**: Provides a great real-time UX, but client-side JavaScript can be paused, the tab can be closed, or the user's system clock could skew. The system remains robust because the server-side cron acts as a fallback, but the visual sync is key.
+*   **Production Improvement**: Sync frontend countdowns with server-provided remaining durations using WebSockets or relative time offsets derived from a server-time ping endpoint rather than trusting the local client system clock.
+
+---
+
 ## Git Commit History
 
-Each commit maps to one implementation stage:
+Each commit maps to a specific implementation stage, showing the progressive construction of the platform:
 
 ```
+20  fix: wire idempotency middleware into reserve and confirm API endpoints
+19  feat: premium cinematic UI overhaul with animated background and glassmorphism
+18  fix: restore missing dynamic route pages [id] for customer orders and products
+17  fix: restructure route groups to prefixed paths - resolve parallel page conflicts
+16  fix: Prisma 7 compatibility - use PrismaPg adapter, fix schema and seed config
 15  chore: add seed data, complete README with architecture and setup instructions
 14  feat: admin monitoring dashboard - live metrics, conflict alerts, stock audit log
 13  feat: order lifecycle (confirmed to packed to shipped) and delivery agent dispatch
