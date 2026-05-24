@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkIdempotency, cacheIdempotencyResult } from "@/lib/idempotency";
 
 // POST /api/reservations — Create a reservation (concurrency-safe)
 // Uses SELECT FOR UPDATE via Prisma $transaction to prevent overselling
 export async function POST(req: Request) {
   try {
+    // ── Idempotency check: if this key was seen before, return cached response ──
+    const idempotencyResult = await checkIdempotency(req);
+    if (idempotencyResult) return idempotencyResult;
+
     const session = await getAuthSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,6 +78,9 @@ export async function POST(req: Request) {
 
       return newReservation;
     });
+
+    // ── Cache the successful result for idempotency replay ──
+    await cacheIdempotencyResult(req, reservation, 201);
 
     return NextResponse.json(reservation, { status: 201 });
   } catch (error: unknown) {

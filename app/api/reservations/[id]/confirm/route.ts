@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkIdempotency, cacheIdempotencyResult } from "@/lib/idempotency";
 
 // POST /api/reservations/[id]/confirm — Confirm reservation after checkout
 // Returns 410 Gone if reservation has expired
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const idempotencyResult = await checkIdempotency(_req);
+    if (idempotencyResult) return idempotencyResult;
+
     const session = await getAuthSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -72,6 +76,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       return newOrder;
     });
 
+    await cacheIdempotencyResult(_req, order, 201);
     return NextResponse.json(order, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "";
