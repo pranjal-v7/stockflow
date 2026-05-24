@@ -1,6 +1,8 @@
 # StockFlow
 
 > Inventory Management System built for **Allo Health**
+>
+> 🚀 **Live Deployed URL**: [https://stockflow-o3um.vercel.app/](https://stockflow-o3um.vercel.app/)
 
 StockFlow is a full-stack, concurrency-safe inventory and reservation management platform supporting role-based access, live stock tracking, auto-expiring reservations, and real-time admin monitoring.
 
@@ -15,8 +17,82 @@ StockFlow is a full-stack, concurrency-safe inventory and reservation management
 | Cache / Idempotency | Upstash Redis |
 | Auth | NextAuth.js (JWT + role-based) |
 | Styling | Tailwind CSS |
-| Cron Jobs | Vercel Cron (every 1 min) |
+| Cron Jobs | Vercel Cron (daily / configurable) |
 | Deployment | Vercel |
+
+---
+
+## Repository File Structure
+
+Below is the directory map of StockFlow's codebase, structured logically by feature area:
+
+```
+stockflow/
+├── app/                                 # Next.js 14 App Router Directory
+│   ├── (admin)/                         # Admin Feature Area
+│   │   ├── layout.tsx                   # Admin Sidebar & Shell Layout
+│   │   └── admin/
+│   │       ├── dashboard/page.tsx       # Live Admin Monitoring Metrics & Alerts
+│   │       ├── products/page.tsx        # Product catalog table (CRUD view)
+│   │       ├── products/new/page.tsx    # Add new product form
+│   │       └── warehouses/page.tsx      # Warehouse cards list
+│   ├── customer/                        # Customer Storefront Area
+│   │   ├── layout.tsx                   # Customer Sidebar
+│   │   ├── products/page.tsx            # Catalog browsing & Warehouse selection
+│   │   ├── products/[id]/page.tsx       # Detail view with Reserve controls
+│   │   ├── cart/page.tsx                # Cart checkout with Countdown Timers
+│   │   └── orders/                      # Customer order status listings
+│   ├── warehouse/                       # Warehouse Management Area
+│   │   ├── layout.tsx                   # Warehouse Manager Sidebar
+│   │   ├── stock/page.tsx               # Stock editing table (edit totalUnits)
+│   │   └── orders/page.tsx              # Order confirmation pipeline view
+│   ├── delivery/                        # Delivery Dispatch Area
+│   │   ├── layout.tsx                   # Delivery Sidebar
+│   │   └── orders/page.tsx              # Mark orders as DELIVERED
+│   ├── api/                             # RESTful Backend API Endpoints
+│   │   ├── products/route.ts            # GET: lists products, POST: adds products
+│   │   ├── warehouses/route.ts          # GET: lists warehouses
+│   │   ├── stock/route.ts               # PUT: updates stock totalUnits
+│   │   ├── reservations/                # Concurrency-safe POST & User GET
+│   │   ├── reservations/[id]/confirm/   # POST: processes payment & decrements stock
+│   │   ├── reservations/[id]/release/   # POST: manual/timer-based stock release
+│   │   ├── cron/expire-reservations/    # GET: Vercel Cron database cleaner
+│   │   └── auth/                        # NextAuth & registration routes
+│   ├── login/page.tsx                   # Premium Role Selector Portal
+│   ├── register/page.tsx                # Credentials registration page
+│   └── globals.css                      # Glassmorphism design utility configurations
+│
+├── components/                          # Shared UI & Layout Components
+│   ├── canvas/
+│   │   └── AnimatedBackground.tsx       # Cinematic drifting 3D camera layer
+│   ├── layout/
+│   │   ├── DashboardShell.tsx           # Premium glass sidebar wrapper shell
+│   │   └── Sidebar.tsx                  # Role-based sidebar navigation
+│   ├── ui/
+│   │   ├── GlassCard.tsx                # Backdrop-blur container component
+│   │   ├── GlowLine.tsx                 # Tech styled custom visual indicators
+│   │   ├── MetricNumber.tsx             # Floating dashboard metric counter
+│   │   └── CountdownTimer.tsx           # Real-time MM:SS live countdown clock
+│   ├── admin/
+│   │   └── StockBadge.tsx               # Stock level color indicator (Red/Yellow/Green)
+│   └── warehouse/
+│   │   └── StockPanel.tsx               # Stock levels audit statistics
+│
+├── lib/                                 # Helper Libraries & Services
+│   ├── prisma.ts                        # Prisma PostgreSQL Client adapter
+│   ├── redis.ts                         # Upstash Redis Client initializer
+│   └── idempotency.ts                   # Upstash Redis key cache header helpers
+│
+├── prisma/                              # Prisma ORM Database Directory
+│   ├── schema.prisma                    # Relational Data Models & Constraints
+│   └── seed.ts                          # Seed Script generating 4 users, products & warehouses
+│
+├── public/                              # Public Static Assets
+│   └── background_stockflow.png         # Animated background asset (1.8 MB)
+│
+├── vercel.json                          # Vercel deployment cron configuration
+└── package.json                         # Build scripts & dependencies definitions
+```
 
 ---
 
