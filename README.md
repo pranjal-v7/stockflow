@@ -37,7 +37,9 @@ StockFlow is a full-stack, concurrency-safe inventory and reservation management
 `POST /api/reservations` uses `SELECT FOR UPDATE` inside a Prisma `$transaction` to lock the `StockEntry` row. Concurrent requests cannot double-reserve the same stock. Returns `409 Conflict` when stock is insufficient.
 
 ### ⏱️ Auto-Expiry Cron (Vercel Cron)
-Reservations expire after **15 minutes**. A Vercel Cron job runs every 1 minute, finds all `PENDING` reservations past their `expiresAt`, marks them `EXPIRED`, and restores `reservedUnits` so stock becomes available again.
+Reservations expire after **15 minutes**. A Vercel Cron job is configured to run, find all `PENDING` reservations past their `expiresAt`, mark them `EXPIRED`, and restore `reservedUnits` so stock becomes available again.
+*   **Deployment Note (Vercel Hobby Tier Limit)**: Vercel Hobby accounts limit cron execution to **once per day** (`0 0 * * *`), which is configured in `vercel.json` to guarantee successful deployment on a free tier. In production (Pro plan), this is set to run every 1 minute (`* * * * *`). To achieve 1-minute execution on a free tier, you can easily plug the `/api/cron/expire-reservations` endpoint (secured via `CRON_SECRET`) into a free external ping service like [Cron-Job.org](https://cron-job.org) or Upstash QStash.
+*   **Interactive Safeguard**: The frontend has an automatic countdown timer which triggers instant release at zero, so the cron serves primarily as a passive background cleanup for abandoned checkout sessions.
 
 ### 🔄 Redis Idempotency
 `POST /api/reservations` reads the `Idempotency-Key` header. If the key exists in Upstash Redis, the cached response is returned (no double-processing). Results are cached with a **24-hour TTL**.
