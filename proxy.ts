@@ -14,7 +14,7 @@ const roleRoutes: Record<Role, string[]> = {
 // Routes that require authentication
 const protectedPrefixes = ["/admin", "/warehouse", "/customer", "/delivery", "/api/admin", "/api/products", "/api/warehouses", "/api/stock", "/api/reservations", "/api/orders"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
@@ -41,7 +41,7 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = {
+export const proxyConfig = {
   matcher: [
     "/admin/:path*",
     "/warehouse/:path*",
