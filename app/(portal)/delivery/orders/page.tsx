@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, MapPin, CheckCircle, Navigation, Clock, User } from "lucide-react";
+import { Package, MapPin, CheckCircle, Clock, User } from "lucide-react";
 
 interface Order {
   id: string;

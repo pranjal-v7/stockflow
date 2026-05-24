@@ -9,7 +9,6 @@ import {
   Activity,
   AlertTriangle,
   RefreshCcw,
-  TrendingUp,
   Package,
   Layers,
   CheckCircle,

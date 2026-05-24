@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, Minus, Plus, ShoppingCart, MapPin } from "lucide-react";
-import GlassCard from "@/components/ui/GlassCard";
 import GlowLine from "@/components/ui/GlowLine";
 
 interface StockEntry {

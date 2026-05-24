@@ -4,6 +4,7 @@ export default function AnimatedBackground() {
   return (
     <div className="fixed inset-0 z-[-10] pointer-events-none overflow-hidden bg-black">
       {/* Animated Image — slow cinematic drift */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/background_stockflow.png"
         alt=""

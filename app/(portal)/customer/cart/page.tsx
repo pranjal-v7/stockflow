@@ -6,8 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import CountdownTimer from "@/components/CountdownTimer";
 import Link from "next/link";
 import { ShoppingCart, Package, MapPin, CheckCircle, Trash2, ArrowRight } from "lucide-react";
-import GlassCard from "@/components/ui/GlassCard";
-import GlowLine from "@/components/ui/GlowLine";
+
 
 interface Reservation {
   id: string;

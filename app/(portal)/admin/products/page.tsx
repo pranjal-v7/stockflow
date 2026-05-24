@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, Plus, Search, Edit2, Trash2, MoreHorizontal } from "lucide-react";
+import { Package, Plus, Search, Edit2, Trash2 } from "lucide-react";
 import GlowLine from "@/components/ui/GlowLine";
 
 interface Product {

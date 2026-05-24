@@ -15,7 +15,7 @@ async function main() {
   // ── Users (one per role) ──────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash("password123", 10);
 
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "admin@allohealth.com" },
     update: {},
     create: {
@@ -26,7 +26,7 @@ async function main() {
     },
   });
 
-  const warehouseMgr = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "warehouse@allohealth.com" },
     update: {},
     create: {
@@ -37,7 +37,7 @@ async function main() {
     },
   });
 
-  const customer = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "customer@allohealth.com" },
     update: {},
     create: {
@@ -48,7 +48,7 @@ async function main() {
     },
   });
 
-  const deliveryAgent = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: "delivery@allohealth.com" },
     update: {},
     create: {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Warehouse, Plus, Package, MapPin, Layers } from "lucide-react";
+import { Warehouse, Plus, MapPin } from "lucide-react";
 import GlowLine from "@/components/ui/GlowLine";
 import GlassCard from "@/components/ui/GlassCard";
 import MetricNumber from "@/components/ui/MetricNumber";

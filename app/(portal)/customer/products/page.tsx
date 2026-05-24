@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Package, Tag, DollarSign } from "lucide-react";
+import { Search, Package } from "lucide-react";
 
 interface StockEntry {
   id: string;
@@ -28,10 +28,6 @@ function getAvailable(product: Product): number {
     (sum, e) => sum + Math.max(0, e.totalUnits - e.reservedUnits),
     0
   );
-}
-
-function getTotal(product: Product): number {
-  return product.stockEntries.reduce((sum, e) => sum + e.totalUnits, 0);
 }
 
 export default function CustomerProductsPage() {
@@ -185,7 +181,6 @@ export default function CustomerProductsPage() {
           >
             {filtered.map((product, idx) => {
               const available = getAvailable(product);
-              const total = getTotal(product);
               const inStock = available > 0;
 
               return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { useMotionValue, animate } from "framer-motion";
 
 interface MetricNumberProps {
   value: number;

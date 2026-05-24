@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, User, MapPin, ArrowRight, Activity, CheckCircle } from "lucide-react";
+import { User, MapPin, ArrowRight, Activity, CheckCircle } from "lucide-react";
 import GlowLine from "@/components/ui/GlowLine";
 
 interface Order {
