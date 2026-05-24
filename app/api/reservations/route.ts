@@ -25,9 +25,9 @@ export async function POST(req: Request) {
     const reservation = await prisma.$transaction(async (tx) => {
       // Lock the StockEntry row for this product+warehouse combination
       const stockEntry = await tx.$queryRaw<
-        Array<{ id: string; total_units: number; reserved_units: number }>
+        Array<{ id: string; totalUnits: number; reservedUnits: number }>
       >`
-        SELECT id, total_units, reserved_units
+        SELECT id, "totalUnits", "reservedUnits"
         FROM "StockEntry"
         WHERE "productId" = ${productId} AND "warehouseId" = ${warehouseId}
         FOR UPDATE
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       }
 
       const stock = stockEntry[0];
-      const availableUnits = stock.total_units - stock.reserved_units;
+      const availableUnits = stock.totalUnits - stock.reservedUnits;
 
       // If not enough units, return 409 Conflict
       if (availableUnits < qty) {

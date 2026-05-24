@@ -77,39 +77,59 @@ export default function NewProductPage() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div style={{ maxWidth: 640 }} className="animate-fade-up">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
         <Link
           href="/admin/products"
-          className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "#9d96b0",
+            transition: "all 0.2s"
+          }}
+          className="hover:text-white hover:bg-white/5"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
         <div>
-          <h2 className="text-2xl font-bold text-white">Add New Product</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Fill in the details to add a product to your catalog</p>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#e8e4f0", letterSpacing: "-0.02em", marginBottom: 2 }}>Add New Product</h1>
+          <p style={{ fontSize: "0.8125rem", color: "#5c5675" }}>Fill in the details to add a product to your catalog</p>
         </div>
       </div>
 
       {/* Form card */}
-      <form onSubmit={handleSubmit} className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="glass-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-red-500/10 border border-red-500/30">
-            <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: 14,
+            borderRadius: 10,
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.2)"
+          }}>
+            <svg width="16" height="16" className="text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-sm text-red-400">{error}</p>
+            <p style={{ fontSize: "0.8125rem", color: "#f87171" }}>{error}</p>
           </div>
         )}
 
         {/* Name */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            Product Name <span className="text-red-400">*</span>
+          <label className="form-label">
+            Product Name <span style={{ color: "#ef4444" }}>*</span>
           </label>
           <input
             type="text"
@@ -118,15 +138,15 @@ export default function NewProductPage() {
             value={form.name}
             onChange={handleChange}
             placeholder="e.g. Omega-3 Fish Oil 1000mg"
-            className="w-full bg-slate-900 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition"
+            className="form-input"
           />
         </div>
 
         {/* SKU + Category row */}
-        <div className="grid grid-cols-2 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              SKU <span className="text-red-400">*</span>
+            <label className="form-label">
+              SKU <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <input
               type="text"
@@ -135,37 +155,61 @@ export default function NewProductPage() {
               value={form.sku}
               onChange={handleChange}
               placeholder="e.g. OMEGA-1000-60"
-              className="w-full bg-slate-900 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition"
+              className="form-input"
+              style={{ fontFamily: "var(--font-mono)" }}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <label className="form-label">
               Category
             </label>
-            <select
-              name="category"
-              id="product-category"
-              value={form.category}
-              onChange={handleChange}
-              className="w-full bg-slate-900 border border-slate-600 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition"
-            >
-              <option value="">Select category</option>
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+            <div style={{ position: "relative" }}>
+              <select
+                name="category"
+                id="product-category"
+                value={form.category}
+                onChange={handleChange}
+                className="form-input form-select"
+                style={{ width: "100%" }}
+              >
+                <option value="" style={{ background: "#0d0d18" }}>Select category</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat} style={{ background: "#0d0d18" }}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <div style={{
+                position: "absolute",
+                right: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                pointerEvents: "none",
+                color: "#5c5675"
+              }}>
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Price */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            Price (₹) <span className="text-red-400">*</span>
+          <label className="form-label">
+            Price (₹) <span style={{ color: "#ef4444" }}>*</span>
           </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">₹</span>
+          <div style={{ position: "relative" }}>
+            <span style={{
+              position: "absolute",
+              left: 14,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "#5c5675",
+              fontSize: "0.875rem",
+              fontWeight: 500
+            }}>₹</span>
             <input
               type="number"
               name="price"
@@ -175,14 +219,15 @@ export default function NewProductPage() {
               placeholder="0.00"
               step="0.01"
               min="0"
-              className="w-full bg-slate-900 border border-slate-600 text-white placeholder-slate-500 rounded-lg pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition"
+              className="form-input"
+              style={{ paddingLeft: 28 }}
             />
           </div>
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          <label className="form-label">
             Description
           </label>
           <textarea
@@ -192,27 +237,29 @@ export default function NewProductPage() {
             onChange={handleChange}
             rows={3}
             placeholder="Short description of the product..."
-            className="w-full bg-slate-900 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition resize-none"
+            className="form-input"
+            style={{ resize: "none" }}
           />
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
+        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
           <button
             type="submit"
             id="submit-product"
             disabled={loading}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/20"
+            className="btn-primary"
+            style={{ flex: 1, justifyContent: "center" }}
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", animation: "spin 0.8s linear infinite" }} />
                 Creating...
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
                 Create Product
               </>
@@ -220,7 +267,8 @@ export default function NewProductPage() {
           </button>
           <Link
             href="/admin/products"
-            className="px-5 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm font-medium transition-all"
+            className="btn-secondary"
+            style={{ display: "inline-flex", justifyContent: "center", alignItems: "center" }}
           >
             Cancel
           </Link>

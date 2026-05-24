@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { motion } from "framer-motion";
+import GlassCard from "@/components/ui/GlassCard";
+import GlowLine from "@/components/ui/GlowLine";
+import MetricNumber from "@/components/ui/MetricNumber";
 import {
-  Package, Warehouse, ShoppingBag, Clock, AlertTriangle,
-  TrendingUp, CheckCircle, Truck, RefreshCw
+  Activity,
+  AlertTriangle,
+  RefreshCcw,
+  TrendingUp,
+  Package,
+  Layers,
+  CheckCircle,
 } from "lucide-react";
 
 interface Metrics {
@@ -17,24 +26,33 @@ interface Metrics {
   reservedUnits: number;
   availableUnits: number;
   outOfStockItems: number;
-  lowStockItems: Array<{ productName: string; warehouseName: string; available: number; total: number }>;
+  lowStockItems: Array<{
+    productName: string;
+    warehouseName: string;
+    available: number;
+    total: number;
+  }>;
   timestamp: string;
 }
 
-function MetricCard({ label, value, icon: Icon, color, sub }: {
-  label: string; value: string | number; icon: React.ElementType;
-  color: string; sub?: string;
-}) {
+const STATUS_CONFIG: Record<string, { label: string; color: string; glow: "teal" | "amber" | "white" }> = {
+  PENDING:   { label: "Pending",   color: "#f59e0b", glow: "amber" },
+  CONFIRMED: { label: "Confirmed", color: "#14b8a6", glow: "teal" },
+  SHIPPED:   { label: "Shipped",   color: "#60a5fa", glow: "white" },
+  DELIVERED: { label: "Delivered", color: "#34d399", glow: "white" },
+  CANCELLED: { label: "Cancelled", color: "#ef4444", glow: "white" },
+};
+
+function StockRatioBar({ available, total }: { available: number; total: number }) {
+  const pct = total > 0 ? (available / total) * 100 : 0;
+  const color = pct > 50 ? "teal" : pct > 20 ? "amber" : "white";
   return (
-    <div className={`bg-slate-800 border border-slate-700/50 rounded-2xl p-5 hover:border-slate-600/50 transition-all`}>
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-sm text-slate-400 font-medium">{label}</p>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
-          <Icon className="w-4 h-4" />
-        </div>
+    <div>
+      <GlowLine value={pct} color={color} />
+      <div className="flex justify-between mt-1" style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+        <span>{available.toLocaleString()} avail</span>
+        <span>{total.toLocaleString()} total</span>
       </div>
-      <p className="text-3xl font-bold text-white">{value}</p>
-      {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -43,151 +61,348 @@ export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMetrics = useCallback(() => {
-    fetch("/api/admin/metrics")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.error) { setMetrics(data); setLastRefreshed(new Date()); }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  const fetchMetrics = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const res = await fetch("/api/admin/metrics");
+      const data = await res.json();
+      if (!data.error) {
+        setMetrics(data);
+        setLastRefreshed(new Date());
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => {
     fetchMetrics();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchMetrics, 30000);
     return () => clearInterval(interval);
   }, [fetchMetrics]);
 
-  if (loading) return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {[...Array(8)].map((_, i) => <div key={i} className="h-28 bg-slate-800 rounded-2xl animate-pulse border border-slate-700/50" />)}
-    </div>
-  );
+  if (loading) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="glass"
+            style={{
+              height: 140,
+              borderRadius: 8,
+              animation: "glow-pulse 1.5s ease-in-out infinite",
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
 
-  if (!metrics) return <div className="text-red-400">Failed to load metrics. Are you logged in as Admin?</div>;
+  if (!metrics) {
+    return (
+      <div style={{ textAlign: "center", paddingTop: 80 }}>
+        <AlertTriangle size={32} color="#f59e0b" style={{ margin: "0 auto 12px" }} />
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
+          Could not load metrics. Ensure you are authenticated as Admin.
+        </p>
+      </div>
+    );
+  }
+
+  const totalOrdersForCalc = Object.values(metrics.ordersByStatus).reduce((a, b) => a + b, 0) || 1;
+  const stockPct = metrics.totalUnits > 0
+    ? (metrics.availableUnits / metrics.totalUnits) * 100
+    : 0;
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Last updated: {lastRefreshed.toLocaleTimeString()} · Auto-refreshes every 30s
-          </p>
+      {/* ── Page header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        style={{ marginBottom: 40 }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <div>
+            <h1
+              style={{
+                fontSize: "clamp(1.5rem, 3vw, 2rem)",
+                fontWeight: 800,
+                letterSpacing: "-0.03em",
+                color: "#ffffff",
+                lineHeight: 1,
+                marginBottom: 8,
+              }}
+            >
+              Command Center
+            </h1>
+            <p
+              className="font-mono-custom"
+              style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em" }}
+            >
+              SYSTEM TELEMETRY ·{" "}
+              <span style={{ color: "rgba(20,184,166,0.8)" }}>
+                {lastRefreshed.toLocaleTimeString()}
+              </span>
+            </p>
+          </div>
+
+          <button
+            onClick={fetchMetrics}
+            disabled={refreshing}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 16px",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 6,
+              color: "rgba(255,255,255,0.5)",
+              cursor: "pointer",
+              fontSize: 11,
+              fontFamily: "inherit",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "rgba(20,184,166,0.3)";
+              e.currentTarget.style.color = "#14b8a6";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+            }}
+          >
+            <RefreshCcw
+              size={12}
+              style={{ animation: refreshing ? "spin 0.8s linear infinite" : "none" }}
+            />
+            Refresh
+          </button>
         </div>
-        <button onClick={fetchMetrics} className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700/50 hover:border-slate-600 rounded-xl text-slate-300 text-sm transition-all">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
+
+        {/* Thin divider with glow */}
+        <div
+          style={{
+            marginTop: 20,
+            height: 1,
+            background: "linear-gradient(90deg, rgba(20,184,166,0.4) 0%, rgba(255,255,255,0.06) 40%, transparent 100%)",
+          }}
+        />
+      </motion.div>
+
+      {/* ── Top metric cards ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 20,
+          marginBottom: 24,
+        }}
+      >
+        <GlassCard title="Active Reservations" accent="teal" delay={0.05}>
+          <MetricNumber value={metrics.activeReservations} label="Currently Reserved" accent="teal" />
+        </GlassCard>
+
+        <GlassCard title="Total Inventory Units" accent="amber" delay={0.1}>
+          <MetricNumber value={metrics.totalUnits} label="Across All Warehouses" accent="amber" />
+        </GlassCard>
+
+        <GlassCard title="Available Units" accent="white" delay={0.15}>
+          <MetricNumber value={metrics.availableUnits} label="Ready to Reserve" accent="white" />
+        </GlassCard>
       </div>
 
-      {/* Key metrics grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard label="Active Reservations" value={metrics.activeReservations} icon={Clock} color="bg-amber-500/20 text-amber-400" sub="PENDING status" />
-        <MetricCard label="Total Orders" value={metrics.totalOrders} icon={ShoppingBag} color="bg-violet-500/20 text-violet-400" sub={`${metrics.ordersByStatus?.CONFIRMED || 0} confirmed`} />
-        <MetricCard label="Total Products" value={metrics.totalProducts} icon={Package} color="bg-blue-500/20 text-blue-400" sub={`${metrics.outOfStockItems} out of stock`} />
-        <MetricCard label="Warehouses" value={metrics.totalWarehouses} icon={Warehouse} color="bg-emerald-500/20 text-emerald-400" sub="Active locations" />
+      {/* ── Secondary metrics ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 16,
+          marginBottom: 32,
+        }}
+      >
+        {[
+          { label: "Total Orders", value: metrics.totalOrders, icon: <Activity size={12} />, color: "#14b8a6" },
+          { label: "Products", value: metrics.totalProducts, icon: <Package size={12} />, color: "#f59e0b" },
+          { label: "Warehouses", value: metrics.totalWarehouses, icon: <Layers size={12} />, color: "#60a5fa" },
+          { label: "Low Stock SKUs", value: metrics.lowStockItems.length, icon: <AlertTriangle size={12} />, color: metrics.lowStockItems.length > 0 ? "#ef4444" : "#34d399" },
+        ].map((item, i) => (
+          <motion.div
+            key={item.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + i * 0.05, duration: 0.4 }}
+            className="glass"
+            style={{
+              padding: "16px 18px",
+              borderRadius: 8,
+              borderTop: `1px solid ${item.color}30`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: item.color }}>
+              {item.icon}
+              <span className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>
+                {item.label}
+              </span>
+            </div>
+            <p style={{ fontSize: "1.5rem", fontWeight: 800, color: item.color, letterSpacing: "-0.03em", lineHeight: 1 }}>
+              {item.value.toLocaleString()}
+            </p>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Stock metrics */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
-          <p className="text-xs text-slate-400 mb-1">Total Units</p>
-          <p className="text-2xl font-bold text-white">{metrics.totalUnits.toLocaleString()}</p>
-          <div className="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full" style={{ width: "100%" }} />
-          </div>
-        </div>
-        <div className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
-          <p className="text-xs text-slate-400 mb-1">Available Units</p>
-          <p className="text-2xl font-bold text-emerald-400">{metrics.availableUnits.toLocaleString()}</p>
-          <div className="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${metrics.totalUnits > 0 ? (metrics.availableUnits / metrics.totalUnits) * 100 : 0}%` }} />
-          </div>
-        </div>
-        <div className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
-          <p className="text-xs text-slate-400 mb-1">Reserved Units</p>
-          <p className="text-2xl font-bold text-amber-400">{metrics.reservedUnits.toLocaleString()}</p>
-          <div className="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${metrics.totalUnits > 0 ? (metrics.reservedUnits / metrics.totalUnits) * 100 : 0}%` }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Orders by status + Expiry stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <div className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-violet-400" /> Orders by Status
-          </h2>
-          <div className="space-y-2">
-            {["CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"].map((s) => {
-              const count = metrics.ordersByStatus?.[s] || 0;
-              const colorMap: Record<string, string> = {
-                CONFIRMED: "bg-blue-500", PACKED: "bg-amber-500",
-                SHIPPED: "bg-violet-500", DELIVERED: "bg-emerald-500",
-              };
+      {/* ── Orders pipeline + Stock ratio ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
+        {/* Orders by Status — horizontal pipeline */}
+        <GlassCard title="Orders Pipeline" accent="teal" delay={0.3}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {Object.entries(STATUS_CONFIG).map(([status, cfg]) => {
+              const count = metrics.ordersByStatus[status] || 0;
+              const pct = (count / totalOrdersForCalc) * 100;
               return (
-                <div key={s} className="flex items-center gap-3">
-                  <span className="text-xs text-slate-400 w-20 shrink-0">{s}</span>
-                  <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${colorMap[s]}`} style={{ width: `${metrics.totalOrders > 0 ? (count / metrics.totalOrders) * 100 : 0}%` }} />
+                <div key={status}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: cfg.color, letterSpacing: "0.04em", fontWeight: 600 }}>
+                      {cfg.label}
+                    </span>
+                    <span className="font-mono-custom" style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                      {count}
+                    </span>
                   </div>
-                  <span className="text-sm font-bold text-white w-6 text-right">{count}</span>
+                  <GlowLine value={pct} color={cfg.glow} />
                 </div>
               );
             })}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-400" /> Expiry & Reliability
-          </h2>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <span className="text-xs text-amber-300">Expired reservations (last 1h)</span>
-              <span className="text-lg font-bold text-amber-400">{metrics.expiredLast1h}</span>
+        {/* Stock health */}
+        <GlassCard title="Stock Health" accent="amber" delay={0.35}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Available Ratio</span>
+                <span className="font-mono-custom" style={{ fontSize: 11, color: "#14b8a6" }}>
+                  {stockPct.toFixed(1)}%
+                </span>
+              </div>
+              <GlowLine value={stockPct} color="teal" />
             </div>
-            <div className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-              <span className="text-xs text-red-300">Out of stock entries</span>
-              <span className="text-lg font-bold text-red-400">{metrics.outOfStockItems}</span>
+
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Reserved</span>
+                <span className="font-mono-custom" style={{ fontSize: 11, color: "#f59e0b" }}>
+                  {metrics.totalUnits > 0 ? ((metrics.reservedUnits / metrics.totalUnits) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <GlowLine value={metrics.totalUnits > 0 ? (metrics.reservedUnits / metrics.totalUnits) * 100 : 0} color="amber" />
             </div>
-            <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <span className="text-xs text-emerald-300">Delivered orders</span>
-              <span className="text-lg font-bold text-emerald-400">{metrics.ordersByStatus?.DELIVERED || 0}</span>
+
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              paddingTop: 12,
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+            }}>
+              <CheckCircle size={14} color={metrics.outOfStockItems === 0 ? "#34d399" : "#ef4444"} />
+              <div>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.3 }}>
+                  {metrics.outOfStockItems === 0
+                    ? "All SKUs have stock available"
+                    : `${metrics.outOfStockItems} SKUs are out of stock`}
+                </p>
+                <p className="font-mono-custom" style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>
+                  OUT-OF-STOCK INDEX
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </GlassCard>
       </div>
 
-      {/* Low stock alerts */}
+      {/* ── Low Stock Alerts — floating rows ── */}
       {metrics.lowStockItems.length > 0 && (
-        <div className="bg-slate-800 border border-amber-500/30 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400" /> Low Stock Alerts
-            <span className="ml-auto px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-xs">{metrics.lowStockItems.length} items</span>
-          </h2>
-          <div className="space-y-2">
-            {metrics.lowStockItems.map((item, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-xl">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+            <AlertTriangle size={14} color="#f59e0b" />
+            <span
+              className="font-mono-custom"
+              style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}
+            >
+              Low Stock Alerts
+            </span>
+            <span
+              className="font-mono-custom"
+              style={{
+                fontSize: 9,
+                padding: "2px 8px",
+                background: "rgba(245,158,11,0.1)",
+                border: "1px solid rgba(245,158,11,0.2)",
+                borderRadius: 4,
+                color: "#f59e0b",
+              }}
+            >
+              {metrics.lowStockItems.length}
+            </span>
+          </div>
+
+          {/* Floating rows — no boxes, just dividers */}
+          <div>
+            {metrics.lowStockItems.map((item, idx) => (
+              <motion.div
+                key={`${item.productName}-${idx}`}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.55 + idx * 0.04, duration: 0.35 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "14px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                }}
+              >
                 <div>
-                  <p className="text-sm font-medium text-white">{item.productName}</p>
-                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <Warehouse className="w-3 h-3" />{item.warehouseName}
+                  <p style={{ fontSize: 13, color: "#ffffff", fontWeight: 500 }}>
+                    {item.productName}
+                  </p>
+                  <p className="font-mono-custom" style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+                    {item.warehouseName}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${item.available === 0 ? "text-red-400" : "text-amber-400"}`}>{item.available}</p>
-                  <p className="text-xs text-slate-500">of {item.total} left</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                  <div style={{ width: 100 }}>
+                    <StockRatioBar available={item.available} total={item.total} />
+                  </div>
+                  <span
+                    className="font-mono-custom"
+                    style={{
+                      fontSize: 11,
+                      color: item.available === 0 ? "#ef4444" : "#f59e0b",
+                      width: 60,
+                      textAlign: "right",
+                    }}
+                  >
+                    {item.available} / {item.total}
+                  </span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

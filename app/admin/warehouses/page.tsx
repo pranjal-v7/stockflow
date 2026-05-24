@@ -1,199 +1,248 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { Warehouse, Plus, Package, MapPin, Layers } from "lucide-react";
+import GlowLine from "@/components/ui/GlowLine";
+import GlassCard from "@/components/ui/GlassCard";
+import MetricNumber from "@/components/ui/MetricNumber";
 
-interface Warehouse {
+interface WarehouseData {
   id: string;
   name: string;
   location: string;
-  stockEntries?: { totalUnits: number; productId: string }[];
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center text-emerald-400">
-        {icon}
-      </div>
-      <div>
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="text-base font-semibold text-white">{value}</p>
-      </div>
-    </div>
-  );
+  stockEntries?: { totalUnits: number; reservedUnits: number; productId: string }[];
 }
 
 export default function AdminWarehousesPage() {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newWarehouse, setNewWarehouse] = useState({ name: "", location: "" });
+  const [saving, setSaving] = useState(false);
 
   const fetchWarehouses = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/warehouses");
-      if (!res.ok) throw new Error("Failed to fetch warehouses");
-      const data = await res.json();
-      setWarehouses(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    const res = await fetch("/api/warehouses");
+    const data = await res.json();
+    setWarehouses(Array.isArray(data) ? data : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchWarehouses(); }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const res = await fetch("/api/warehouses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newWarehouse),
+    });
+    if (res.ok) {
+      setNewWarehouse({ name: "", location: "" });
+      setShowAdd(false);
+      await fetchWarehouses();
     }
+    setSaving(false);
   };
 
-  useEffect(() => {
-    fetchWarehouses();
-  }, []);
-
-  const getProductCount = (w: Warehouse) => {
-    const unique = new Set(w.stockEntries?.map((e) => e.productId) ?? []);
-    return unique.size;
-  };
-
-  const getTotalUnits = (w: Warehouse) =>
-    w.stockEntries?.reduce((s, e) => s + e.totalUnits, 0) ?? 0;
+  const totalUnits = warehouses.reduce((sum, w) => sum + (w.stockEntries?.reduce((s, e) => s + e.totalUnits, 0) ?? 0), 0);
+  const totalAvail = warehouses.reduce((sum, w) => sum + (w.stockEntries?.reduce((s, e) => s + Math.max(0, e.totalUnits - e.reservedUnits), 0) ?? 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Warehouses</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Manage your fulfilment network</p>
-        </div>
-        <button
-          onClick={() => alert("Add Warehouse form coming soon")}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/20"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Warehouse
-        </button>
-      </div>
-
-      {/* Summary bar */}
-      {!loading && !error && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl px-6 py-4 grid grid-cols-3 gap-6 divide-x divide-slate-700">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Warehouses</p>
-            <p className="text-3xl font-bold text-white mt-1">{warehouses.length}</p>
-          </div>
-          <div className="pl-6">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Products Stored</p>
-            <p className="text-3xl font-bold text-white mt-1">
-              {warehouses.reduce((s, w) => s + getProductCount(w), 0).toLocaleString()}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+              <Warehouse size={20} color="#60a5fa" />
+              <h1 style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#fff" }}>Warehouses</h1>
+            </div>
+            <p className="font-mono-custom" style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em" }}>
+              {warehouses.length} WAREHOUSE{warehouses.length !== 1 ? "S" : ""} ACROSS NETWORK
             </p>
           </div>
-          <div className="pl-6">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Stock Units</p>
-            <p className="text-3xl font-bold text-white mt-1">
-              {warehouses.reduce((s, w) => s + getTotalUnits(w), 0).toLocaleString()}
-            </p>
-          </div>
+          <button
+            onClick={() => setShowAdd(!showAdd)}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 18px", borderRadius: 7,
+              background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.25)",
+              color: "#60a5fa", fontSize: 13, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(96,165,250,0.18)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(96,165,250,0.1)"; }}
+          >
+            <Plus size={14} /> Add Warehouse
+          </button>
+        </div>
+        <div style={{ marginTop: 16, height: 1, background: "linear-gradient(90deg, rgba(96,165,250,0.4), rgba(255,255,255,0.06) 40%, transparent)" }} />
+      </motion.div>
+
+      {/* Summary metrics */}
+      {!loading && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+          <GlassCard title="Total Warehouses" accent="white" delay={0.05}>
+            <MetricNumber value={warehouses.length} label="Active Locations" accent="white" />
+          </GlassCard>
+          <GlassCard title="Total Units" accent="amber" delay={0.1}>
+            <MetricNumber value={totalUnits} label="Across All Warehouses" accent="amber" />
+          </GlassCard>
+          <GlassCard title="Available Units" accent="teal" delay={0.15}>
+            <MetricNumber value={totalAvail} label="Ready to Reserve" accent="teal" />
+          </GlassCard>
         </div>
       )}
 
-      {/* Warehouse Cards Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm text-slate-400">Loading warehouses...</p>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="text-center">
-            <p className="text-red-400">{error}</p>
-            <button onClick={fetchWarehouses} className="mt-3 text-xs text-slate-400 hover:text-white underline">
-              Retry
-            </button>
-          </div>
-        </div>
-      ) : warehouses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 gap-3">
-          <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          <p className="text-slate-400 text-sm">No warehouses configured yet</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {warehouses.map((warehouse) => {
-            const productCount = getProductCount(warehouse);
-            const totalUnits = getTotalUnits(warehouse);
-            return (
-              <div
-                key={warehouse.id}
-                className="bg-slate-800 border border-slate-700 rounded-xl p-5 hover:border-emerald-500/40 hover:bg-slate-700/50 transition-all duration-200 group"
-              >
-                {/* Card header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center group-hover:bg-emerald-500/25 transition-colors">
-                      <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white text-sm group-hover:text-emerald-300 transition-colors">
-                        {warehouse.name}
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        {warehouse.location}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
-                    Active
-                  </span>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-slate-700 my-4"></div>
-
-                {/* Stats */}
-                <div className="space-y-3">
-                  <StatCard
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    }
-                    label="Unique Products"
-                    value={productCount.toLocaleString()}
-                  />
-                  <StatCard
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                      </svg>
-                    }
-                    label="Total Stock Units"
-                    value={totalUnits.toLocaleString()}
+      {/* Add warehouse form */}
+      <AnimatePresence>
+        {showAdd && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            style={{ marginBottom: 24 }}
+          >
+            <GlassCard title="New Warehouse" accent="white" animate={false}>
+              <form onSubmit={handleAdd} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 200px" }}>
+                  <label className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.15em", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 6 }}>
+                    WAREHOUSE NAME
+                  </label>
+                  <input
+                    type="text" required placeholder="e.g. Chennai South"
+                    value={newWarehouse.name}
+                    onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
+                    style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, color: "#fff", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                    onFocus={(e) => (e.target.style.borderColor = "rgba(96,165,250,0.4)")}
+                    onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
                   />
                 </div>
-
-                {/* Footer actions */}
-                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700">
-                  <Link
-                    href={`/warehouse/stock?warehouseId=${warehouse.id}`}
-                    className="flex-1 text-center text-xs font-medium py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-all"
+                <div style={{ flex: "1 1 200px" }}>
+                  <label className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.15em", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 6 }}>
+                    LOCATION
+                  </label>
+                  <input
+                    type="text" required placeholder="e.g. Chennai, Tamil Nadu"
+                    value={newWarehouse.location}
+                    onChange={(e) => setNewWarehouse({ ...newWarehouse, location: e.target.value })}
+                    style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, color: "#fff", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                    onFocus={(e) => (e.target.style.borderColor = "rgba(96,165,250,0.4)")}
+                    onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="submit" disabled={saving}
+                    style={{ padding: "10px 20px", borderRadius: 7, background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.3)", color: "#60a5fa", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
                   >
-                    View Stock
-                  </Link>
-                  <button className="flex-1 text-xs font-medium py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-all">
-                    Edit
+                    {saving ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    type="button" onClick={() => setShowAdd(false)}
+                    style={{ padding: "10px 16px", borderRadius: 7, background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    Cancel
                   </button>
                 </div>
-              </div>
+              </form>
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Warehouse grid */}
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass" style={{ height: 180, borderRadius: 12, animation: "glow-pulse 1.5s ease-in-out infinite" }} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+          {warehouses.map((wh, idx) => {
+            const total = wh.stockEntries?.reduce((s, e) => s + e.totalUnits, 0) ?? 0;
+            const avail = wh.stockEntries?.reduce((s, e) => s + Math.max(0, e.totalUnits - e.reservedUnits), 0) ?? 0;
+            const skus = new Set(wh.stockEntries?.map((e) => e.productId) ?? []).size;
+            const pct = total > 0 ? (avail / total) * 100 : 0;
+            const color = pct > 50 ? "teal" : pct > 20 ? "amber" : "white";
+
+            return (
+              <motion.div
+                key={wh.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 + idx * 0.08, duration: 0.45 }}
+                style={{
+                  position: "relative", borderRadius: 12, padding: 24,
+                  background: "rgba(0,0,0,0.3)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderTop: "1px solid rgba(96,165,250,0.2)",
+                  overflow: "hidden",
+                  transition: "border-color 0.2s, box-shadow 0.2s",
+                }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(96,165,250,0.2)";
+                  e.currentTarget.style.boxShadow = "0 0 30px rgba(96,165,250,0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {/* Corner + */}
+                <span style={{ position: "absolute", top: 8, left: 10, fontSize: 11, color: "rgba(96,165,250,0.3)", fontFamily: "monospace" }} aria-hidden>+</span>
+                <span style={{ position: "absolute", bottom: 8, right: 10, fontSize: 11, color: "rgba(96,165,250,0.3)", fontFamily: "monospace" }} aria-hidden>+</span>
+
+                {/* Top accent */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(96,165,250,0.4), transparent)" }} />
+
+                {/* Icon + Name */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Warehouse size={18} color="#60a5fa" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{wh.name}</h3>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                      <MapPin size={10} /> {wh.location}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stats row */}
+                <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <p style={{ fontSize: "1.3rem", fontWeight: 800, color: "#60a5fa", letterSpacing: "-0.02em", lineHeight: 1 }}>{total.toLocaleString()}</p>
+                    <p className="font-mono-custom" style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>TOTAL UNITS</p>
+                  </div>
+                  <div style={{ borderLeft: "1px solid rgba(255,255,255,0.06)", paddingLeft: 16 }}>
+                    <p style={{ fontSize: "1.3rem", fontWeight: 800, color: "#14b8a6", letterSpacing: "-0.02em", lineHeight: 1 }}>{avail.toLocaleString()}</p>
+                    <p className="font-mono-custom" style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>AVAILABLE</p>
+                  </div>
+                  <div style={{ borderLeft: "1px solid rgba(255,255,255,0.06)", paddingLeft: 16 }}>
+                    <p style={{ fontSize: "1.3rem", fontWeight: 800, color: "rgba(255,255,255,0.7)", letterSpacing: "-0.02em", lineHeight: 1 }}>{skus}</p>
+                    <p className="font-mono-custom" style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>SKUS</p>
+                  </div>
+                </div>
+
+                {/* Stock ratio bar */}
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span className="font-mono-custom" style={{ fontSize: 9, color: "rgba(255,255,255,0.3)" }}>STOCK RATIO</span>
+                    <span className="font-mono-custom" style={{ fontSize: 9, color: pct > 50 ? "#14b8a6" : pct > 20 ? "#f59e0b" : "#ef4444" }}>
+                      {pct.toFixed(0)}%
+                    </span>
+                  </div>
+                  <GlowLine value={pct} color={color} />
+                </div>
+              </motion.div>
             );
           })}
         </div>

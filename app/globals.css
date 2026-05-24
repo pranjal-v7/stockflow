@@ -1,26 +1,208 @@
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Dot Grid Background ── */
+.dot-grid {
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.06) 1px,
+    transparent 1px
+  );
+  background-size: 40px 40px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Glassmorphism ── */
+.glass {
+  background: rgba(8, 14, 20, 1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.glass-heavy {
+  background: rgba(5, 10, 15, 0.97);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Glowing accents ── */
+.glow-teal {
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.3), 0 0 60px rgba(20, 184, 166, 0.1);
+}
+.glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 0 60px rgba(245, 158, 11, 0.1);
+}
+.glow-white {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+/* ── Text glow ── */
+.text-glow-teal  { text-shadow: 0 0 20px rgba(20, 184, 166, 0.8); }
+.text-glow-amber { text-shadow: 0 0 20px rgba(245, 158, 11, 0.8); }
+
+/* ── Hairline borders ── */
+.border-hairline { border: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* ── Monospace utility ── */
+.font-mono-custom { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+/* ── Animations ── */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes scan-line {
+  0% { top: -2px; }
+  100% { top: 100%; }
+}
+@keyframes float-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-float-up   { animation: float-up 0.5s ease forwards; }
+
+@layer utilities {
+  .bg-technical-grid {
+    background-color: transparent;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: center center;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* The smooth 3D drift animation */
+@keyframes slow-pan {
+  0% {
+    transform: scale(1.05) translate(0%, 0%);
+  }
+  50% {
+    transform: scale(1.1) translate(-1%, -2%);
+  }
+  100% {
+    transform: scale(1.05) translate(1%, 1%);
+  }
 }
+
+.animate-slow-pan {
+  animation: slow-pan 30s ease-in-out infinite alternate;
+  will-change: transform; /* Optimizes the animation performance */
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ── Input resets ── */
+input, textarea, select {
+  background: transparent;
+  outline: none;
+  border: none;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #000 inset !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* ── Focus ring ── */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.5);
+}
+
+/* ── Selection ── */
+::selection {
+  background: rgba(20, 184, 166, 0.25);
+  color: #ffffff;
+}
+
+/* ── Sidebar nav active ── */
+.nav-active {
+  color: #fff;
+  position: relative;
+}
+.nav-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 60%;
+  background: linear-gradient(to bottom, #14b8a6, #06b6d4);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(20, 184, 166, 0.8);
+}
+
+/* ── Product hover card ── */
+.product-float {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.product-float:hover {
+  box-shadow: 0 0 40px rgba(20, 184, 166, 0.15), 0 20px 60px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+/* ── Thin glow bar track ── */
+.glow-track {
+  position: relative;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 1px;
+  overflow: visible;
+}
+.glow-fill-teal {
+  height: 100%;
+  background: #14b8a6;
+  box-shadow: 0 0 8px #14b8a6, 0 0 16px rgba(20, 184, 166, 0.4);
+  border-radius: 1px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glow-fill-amber {
+  height: 100%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b, 0 0 16px rgba(245, 158, 11, 0.4);
+  border-radius: 1px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glow-fill-white {
+  height: 100%;
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+  border-radius: 1px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Status badge ── */
+.status-pending   { color: #f59e0b; }
+.status-confirmed { color: #14b8a6; }
+.status-shipped   { color: #60a5fa; }
+.status-delivered { color: #34d399; }
+.status-cancelled { color: #ef4444; }

@@ -4,7 +4,10 @@ import { useState, useEffect, use } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { ArrowLeft, Package, Minus, Plus, ShoppingCart, MapPin } from "lucide-react";
+import GlassCard from "@/components/ui/GlassCard";
+import GlowLine from "@/components/ui/GlowLine";
 
 interface StockEntry {
   id: string;
@@ -36,6 +39,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   const [reserving, setReserving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     fetch(`/api/products/${id}`)
@@ -50,123 +54,236 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const selectedStock = product?.stockEntries.find((s) => s.warehouseId === selectedWarehouse);
   const available = selectedStock ? selectedStock.totalUnits - selectedStock.reservedUnits : 0;
+  const totalAvailable = product?.stockEntries.reduce((sum, s) => sum + Math.max(0, s.totalUnits - s.reservedUnits), 0) ?? 0;
 
   const handleReserve = async () => {
     if (!session) { router.push("/login"); return; }
     if (!selectedWarehouse) { setError("Please select a warehouse"); return; }
     if (qty > available) { setError("Not enough stock available"); return; }
-
     setReserving(true);
     setError("");
-
-    const idempotencyKey = `res-${Date.now()}`;
     const res = await fetch("/api/reservations", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": `res-${Date.now()}` },
       body: JSON.stringify({ productId: product!.id, warehouseId: selectedWarehouse, qty }),
     });
-
     const data = await res.json();
-
-    if (res.status === 409) { setError("Stock just ran out — please try a different warehouse."); setReserving(false); return; }
+    if (res.status === 409) { setError("Stock just ran out — try a different warehouse."); setReserving(false); return; }
     if (!res.ok) { setError(data.error || "Reservation failed"); setReserving(false); return; }
-
-    router.push("/customer/cart");
+    setSuccess(true);
+    setTimeout(() => router.push("/customer/cart"), 1000);
   };
 
-  if (loading) return (
-    <div className="animate-pulse space-y-4">
-      <div className="h-8 bg-slate-800 rounded-xl w-48" />
-      <div className="h-64 bg-slate-800 rounded-2xl" />
+  if (loading) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+        <div className="glass" style={{ height: 380, borderRadius: 12, animation: "glow-pulse 1.5s ease-in-out infinite" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {[80, 48, 32, 120, 80].map((h, i) => (
+            <div key={i} className="glass" style={{ height: h, borderRadius: 8, animation: "glow-pulse 1.5s ease-in-out infinite" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) return (
+    <div style={{ textAlign: "center", paddingTop: 80 }}>
+      <Package size={32} color="rgba(255,255,255,0.15)" style={{ margin: "0 auto 12px" }} />
+      <p style={{ color: "rgba(255,255,255,0.3)" }}>Product not found</p>
     </div>
   );
 
-  if (!product) return <div className="text-slate-400 text-center py-20">Product not found</div>;
-
   return (
-    <div className="max-w-4xl">
-      <Link href="/customer/products" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors text-sm">
-        <ArrowLeft className="w-4 h-4" /> Back to products
+    <div>
+      {/* Back link */}
+      <Link
+        href="/customer/products"
+        style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "none", marginBottom: 28, transition: "color 0.2s" }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+      >
+        <ArrowLeft size={14} /> Back to Products
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-slate-800 border border-slate-700/50 rounded-2xl h-72 lg:h-96 flex items-center justify-center">
-          <div className="w-24 h-24 bg-violet-500/20 rounded-2xl flex items-center justify-center">
-            <Package className="w-12 h-12 text-violet-400" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "start" }}>
+        {/* Product image placeholder */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="glass"
+          style={{
+            height: 380, borderRadius: 12,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            borderTop: "1px solid rgba(20,184,166,0.2)",
+            position: "relative", overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute", inset: 0,
+              background: "radial-gradient(ellipse at 50% 50%, rgba(20,184,166,0.06) 0%, transparent 70%)",
+            }}
+          />
+          <div style={{
+            width: 80, height: 80, borderRadius: 20,
+            background: "rgba(20,184,166,0.1)", border: "1px solid rgba(20,184,166,0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Package size={36} color="#14b8a6" />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="space-y-6">
+        {/* Product info */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          style={{ display: "flex", flexDirection: "column", gap: 20 }}
+        >
+          {/* Category + name */}
           <div>
-            <span className="text-xs text-slate-500 font-mono">{product.sku}</span>
-            <h1 className="text-2xl font-bold text-white mt-1">{product.name}</h1>
-            <span className="inline-block mt-2 px-3 py-1 bg-violet-500/10 text-violet-300 border border-violet-500/20 rounded-full text-xs font-medium">{product.category}</span>
+            {product.category && (
+              <span className="font-mono-custom" style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(20,184,166,0.7)", display: "block", marginBottom: 6 }}>
+                {product.category}
+              </span>
+            )}
+            <h1 style={{ fontSize: "clamp(1.4rem, 3vw, 1.9rem)", fontWeight: 800, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1.15, marginBottom: 6 }}>
+              {product.name}
+            </h1>
+            <p className="font-mono-custom" style={{ fontSize: 11, color: "rgba(20,184,166,0.6)" }}>{product.sku}</p>
           </div>
 
-          {product.description && <p className="text-slate-400 text-sm leading-relaxed">{product.description}</p>}
-          <div className="text-3xl font-bold text-white">₹{product.price}</div>
+          {/* Description */}
+          {product.description && (
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>{product.description}</p>
+          )}
 
+          {/* Price */}
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: "2.2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>
+              ₹{product.price.toLocaleString("en-IN")}
+            </span>
+            <span className="font-mono-custom" style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
+              / unit · {totalAvailable} available total
+            </span>
+          </div>
+
+          {/* Warehouse selector */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4" /> Select Warehouse
-            </label>
-            <div className="space-y-2">
+            <p className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+              <MapPin size={11} /> Select Warehouse
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {product.stockEntries.map((s) => {
                 const avail = s.totalUnits - s.reservedUnits;
+                const isSelected = selectedWarehouse === s.warehouseId;
+                const pct = s.totalUnits > 0 ? (avail / s.totalUnits) * 100 : 0;
                 return (
                   <button
                     key={s.warehouseId}
                     id={`wh-${s.warehouseId}`}
                     onClick={() => { setSelectedWarehouse(s.warehouseId); setError(""); }}
                     disabled={avail === 0}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-sm transition-all ${
-                      selectedWarehouse === s.warehouseId
-                        ? "border-violet-500/50 bg-violet-500/10 text-violet-300"
-                        : avail === 0
-                        ? "border-slate-700/30 bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                        : "border-slate-700/50 bg-slate-800 text-slate-300 hover:border-slate-600"
-                    }`}
+                    style={{
+                      width: "100%", padding: "12px 14px", borderRadius: 8, textAlign: "left",
+                      background: isSelected ? "rgba(20,184,166,0.08)" : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${isSelected ? "rgba(20,184,166,0.3)" : "rgba(255,255,255,0.06)"}`,
+                      cursor: avail === 0 ? "not-allowed" : "pointer",
+                      opacity: avail === 0 ? 0.4 : 1,
+                      fontFamily: "inherit",
+                      transition: "all 0.15s",
+                    }}
                   >
-                    <div className="text-left">
-                      <p className="font-medium">{s.warehouse.name}</p>
-                      <p className="text-xs opacity-70">{s.warehouse.location}</p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: isSelected ? "#14b8a6" : "rgba(255,255,255,0.7)" }}>{s.warehouse.name}</p>
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{s.warehouse.location}</p>
+                      </div>
+                      <span className="font-mono-custom" style={{
+                        fontSize: 10, padding: "2px 8px", borderRadius: 4,
+                        background: avail === 0 ? "rgba(239,68,68,0.1)" : avail <= 10 ? "rgba(245,158,11,0.1)" : "rgba(20,184,166,0.1)",
+                        color: avail === 0 ? "#ef4444" : avail <= 10 ? "#f59e0b" : "#14b8a6",
+                        border: `1px solid ${avail === 0 ? "rgba(239,68,68,0.2)" : avail <= 10 ? "rgba(245,158,11,0.2)" : "rgba(20,184,166,0.2)"}`,
+                      }}>
+                        {avail === 0 ? "Out of stock" : `${avail} avail`}
+                      </span>
                     </div>
-                    <span className={`text-xs font-medium ${avail === 0 ? "text-red-500" : avail <= 10 ? "text-amber-400" : "text-emerald-400"}`}>
-                      {avail === 0 ? "Out of stock" : `${avail} available`}
-                    </span>
+                    <GlowLine value={pct} color={avail === 0 ? "white" : avail <= 10 ? "amber" : "teal"} />
                   </button>
                 );
               })}
             </div>
           </div>
 
+          {/* Quantity */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Quantity</label>
-            <div className="flex items-center gap-3">
-              <button id="qty-minus" onClick={() => setQty(Math.max(1, qty - 1))} className="w-9 h-9 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center justify-center text-white transition-colors">
-                <Minus className="w-4 h-4" />
+            <p className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 10 }}>Quantity</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button
+                id="qty-minus"
+                onClick={() => setQty(Math.max(1, qty - 1))}
+                style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+              >
+                <Minus size={14} />
               </button>
-              <span className="text-xl font-bold text-white w-8 text-center">{qty}</span>
-              <button id="qty-plus" onClick={() => setQty(Math.min(available, qty + 1))} className="w-9 h-9 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center justify-center text-white transition-colors">
-                <Plus className="w-4 h-4" />
+              <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", minWidth: 32, textAlign: "center" }}>{qty}</span>
+              <button
+                id="qty-plus"
+                onClick={() => setQty(Math.min(available, qty + 1))}
+                style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
+              >
+                <Plus size={14} />
               </button>
-              <span className="text-sm text-slate-500">{available > 0 ? `of ${available} available` : ""}</span>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                {available > 0 ? `of ${available} available` : "—"}
+              </span>
             </div>
           </div>
 
-          {error && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">{error}</div>}
+          {/* Error */}
+          {error && (
+            <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 7, fontSize: 12, color: "#f87171" }}>
+              {error}
+            </div>
+          )}
 
-          <button
+          {/* Reserve button */}
+          <motion.button
             id="reserve-btn"
             onClick={handleReserve}
-            disabled={reserving || available === 0}
-            className="w-full py-3 bg-violet-500 hover:bg-violet-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            disabled={reserving || available === 0 || success}
+            whileHover={!reserving && available > 0 ? { scale: 1.01 } : {}}
+            whileTap={!reserving && available > 0 ? { scale: 0.99 } : {}}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              width: "100%", padding: "14px",
+              borderRadius: 8,
+              background: success ? "rgba(52,211,153,0.12)" : available === 0 ? "rgba(255,255,255,0.03)" : "rgba(20,184,166,0.12)",
+              border: `1px solid ${success ? "rgba(52,211,153,0.3)" : available === 0 ? "rgba(255,255,255,0.06)" : "rgba(20,184,166,0.3)"}`,
+              color: success ? "#34d399" : available === 0 ? "rgba(255,255,255,0.25)" : "#14b8a6",
+              fontSize: 14, fontWeight: 700,
+              cursor: reserving || available === 0 ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              boxShadow: available > 0 && !success ? "0 0 20px rgba(20,184,166,0.08)" : "none",
+              transition: "all 0.2s",
+            }}
           >
-            <ShoppingCart className="w-5 h-5" />
-            {reserving ? "Reserving..." : available === 0 ? "Out of Stock" : "Reserve Now"}
-          </button>
-          <p className="text-xs text-slate-500 text-center">Reserved items are held for 15 minutes.</p>
-        </div>
+            {reserving ? (
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(20,184,166,0.3)", borderTopColor: "#14b8a6", animation: "spin 0.8s linear infinite" }} />
+            ) : success ? (
+              "✓ Reserved! Redirecting to cart…"
+            ) : available === 0 ? (
+              "Out of Stock"
+            ) : (
+              <><ShoppingCart size={16} /> Reserve Now — ₹{(product.price * qty).toLocaleString("en-IN")}</>
+            )}
+          </motion.button>
+          <p className="font-mono-custom" style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textAlign: "center", letterSpacing: "0.06em" }}>
+            RESERVED ITEMS ARE HELD FOR 15 MINUTES
+          </p>
+        </motion.div>
       </div>
     </div>
   );

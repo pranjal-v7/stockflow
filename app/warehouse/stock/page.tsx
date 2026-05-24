@@ -8,15 +8,8 @@ interface StockEntry {
   totalUnits: number;
   reservedUnits: number;
   availableUnits: number;
-  product?: {
-    id: string;
-    name: string;
-    sku: string;
-  };
-  warehouse?: {
-    id: string;
-    name: string;
-  };
+  product?: { id: string; name: string; sku: string };
+  warehouse?: { id: string; name: string };
 }
 
 export default function WarehouseStockPage() {
@@ -24,226 +17,129 @@ export default function WarehouseStockPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
+  const [editValue, setEditValue] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const fetchStock = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/stock");
-      if (!res.ok) throw new Error("Failed to fetch stock");
-      const data = await res.json();
-      setStockEntries(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
+    try { setLoading(true); const res = await fetch("/api/stock"); if (!res.ok) throw new Error("Failed"); const data = await res.json(); setStockEntries(data); }
+    catch (err) { setError(err instanceof Error ? err.message : "Unknown error"); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    fetchStock();
-  }, [fetchStock]);
+  useEffect(() => { fetchStock(); }, [fetchStock]);
 
-  const startEdit = (entry: StockEntry) => {
-    setEditingId(entry.id);
-    setEditValue(String(entry.totalUnits));
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditValue("");
-  };
+  const startEdit = (e: StockEntry) => { setEditingId(e.id); setEditValue(String(e.totalUnits)); };
+  const cancelEdit = () => { setEditingId(null); setEditValue(""); };
 
   const saveEdit = async (entry: StockEntry) => {
     const newTotal = parseInt(editValue, 10);
-    if (isNaN(newTotal) || newTotal < 0) {
-      alert("Please enter a valid non-negative number.");
-      return;
-    }
+    if (isNaN(newTotal) || newTotal < 0) { alert("Invalid number"); return; }
     setSavingId(entry.id);
     try {
-      const res = await fetch(`/api/stock/${entry.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalUnits: newTotal }),
-      });
-      if (!res.ok) throw new Error("Update failed");
+      const res = await fetch(`/api/stock/${entry.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ totalUnits: newTotal }) });
+      if (!res.ok) throw new Error();
       const updated: StockEntry = await res.json();
-      setStockEntries((prev) =>
-        prev.map((e) => (e.id === entry.id ? { ...e, ...updated } : e))
-      );
+      setStockEntries(prev => prev.map(e => e.id === entry.id ? { ...e, ...updated } : e));
       setEditingId(null);
-    } catch {
-      alert("Failed to update stock.");
-    } finally {
-      setSavingId(null);
-    }
+    } catch { alert("Failed to update."); } finally { setSavingId(null); }
   };
 
-  const filtered = stockEntries.filter(
-    (e) =>
-      e.product?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      e.product?.sku?.toLowerCase().includes(search.toLowerCase()) ||
-      e.warehouse?.name?.toLowerCase().includes(search.toLowerCase())
+  const filtered = stockEntries.filter(e =>
+    e.product?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    e.product?.sku?.toLowerCase().includes(search.toLowerCase()) ||
+    e.warehouse?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="space-y-6">
+    <div style={{ maxWidth: 1200 }}>
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-white">Stock Management</h2>
-        <p className="text-sm text-slate-400 mt-0.5">View and update inventory levels across warehouses</p>
-      </div>
-
-      {/* Stats Panel */}
-      {!loading && !error && <StockPanel stockEntries={stockEntries} />}
-
-      {/* Search + refresh */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search product, SKU or warehouse..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition"
-          />
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#e8e4f0", letterSpacing: "-0.02em", marginBottom: 4 }}>Stock Management</h1>
+          <p style={{ fontSize: "0.8125rem", color: "#5c5675" }}>View and update inventory levels across all warehouses</p>
         </div>
-        <button
-          onClick={fetchStock}
-          className="p-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition"
-          title="Refresh"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
+        <button onClick={fetchStock} className="btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" /></svg>
+          Refresh
         </button>
       </div>
 
+      {/* Stats panel */}
+      {!loading && !error && <StockPanel stockEntries={stockEntries} />}
+
+      {/* Search */}
+      <div style={{ position: "relative", marginBottom: 20, marginTop: 24 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5c5675" strokeWidth="2" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" placeholder="Search product, SKU or warehouse…" value={search} onChange={e => setSearch(e.target.value)}
+          className="form-input" style={{ paddingLeft: 40 }} />
+      </div>
+
       {/* Table */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <div style={{ background: "rgba(13,13,24,0.8)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, overflow: "hidden" }}>
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-slate-400">Loading stock data...</p>
-            </div>
+          <div style={{ padding: 40, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid rgba(6,182,212,0.2)", borderTopColor: "#06b6d4", animation: "spin 0.8s linear infinite" }} />
+            <p style={{ fontSize: "0.8125rem", color: "#5c5675" }}>Loading stock data…</p>
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center">
-              <p className="text-red-400">{error}</p>
-              <button onClick={fetchStock} className="mt-3 text-xs text-slate-400 hover:text-white underline">
-                Retry
-              </button>
-            </div>
+          <div style={{ padding: 40, textAlign: "center" }}>
+            <p style={{ color: "#f87171", marginBottom: 12 }}>{error}</p>
+            <button onClick={fetchStock} className="btn-secondary">Retry</button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <p className="text-slate-400 text-sm">No stock entries found</p>
+          <div style={{ padding: 60, textAlign: "center" }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3d3a52" strokeWidth="1.5" style={{ margin: "0 auto 12px" }}><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            <p style={{ color: "#5c5675", fontSize: "0.875rem" }}>No stock entries found</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="data-table">
             <thead>
-              <tr className="border-b border-slate-700">
-                {["Product Name", "SKU", "Warehouse", "Total Units", "Reserved", "Available", "Actions"].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3.5 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
+              <tr>
+                {["Product", "SKU", "Warehouse", "Total Units", "Reserved", "Available", "Actions"].map(h => (
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {filtered.map((entry) => {
+            <tbody>
+              {filtered.map(entry => {
                 const isEditing = editingId === entry.id;
                 const isSaving = savingId === entry.id;
                 const available = entry.availableUnits ?? (entry.totalUnits - entry.reservedUnits);
                 const lowStock = available <= 10;
-
                 return (
-                  <tr key={entry.id} className="hover:bg-slate-700/30 transition-colors group">
-                    <td className="px-5 py-4">
-                      <span className="font-medium text-white group-hover:text-violet-300 transition-colors">
-                        {entry.product?.name ?? "—"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <code className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-mono">
-                        {entry.product?.sku ?? "—"}
-                      </code>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="text-xs bg-slate-700/50 text-slate-300 border border-slate-600 px-2.5 py-1 rounded-full">
-                        {entry.warehouse?.name ?? "—"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
+                  <tr key={entry.id}>
+                    <td><span style={{ fontWeight: 600, color: "#e8e4f0", fontSize: "0.875rem" }}>{entry.product?.name ?? "—"}</span></td>
+                    <td><span className="sku">{entry.product?.sku ?? "—"}</span></td>
+                    <td><span className="badge badge-cyan">{entry.warehouse?.name ?? "—"}</span></td>
+                    <td>
                       {isEditing ? (
-                        <input
-                          type="number"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          min={0}
-                          autoFocus
-                          className="w-24 bg-slate-900 border border-violet-500 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40"
-                        />
+                        <input type="number" value={editValue} onChange={e => setEditValue(e.target.value)}
+                          min={0} autoFocus className="form-input" style={{ width: 100, padding: "6px 10px" }} />
                       ) : (
-                        <span className="text-slate-200 font-medium">{entry.totalUnits.toLocaleString()}</span>
+                        <span style={{ fontFamily: "var(--font-mono)", color: "#9d96b0" }}>{entry.totalUnits.toLocaleString()}</span>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-amber-400 font-medium">
-                      {entry.reservedUnits.toLocaleString()}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`font-semibold ${available === 0 ? "text-red-400" : lowStock ? "text-amber-400" : "text-emerald-400"}`}>
+                    <td><span style={{ fontFamily: "var(--font-mono)", color: "#fbbf24" }}>{entry.reservedUnits.toLocaleString()}</span></td>
+                    <td>
+                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: available === 0 ? "#f87171" : lowStock ? "#fbbf24" : "#34d399" }}>
                         {available.toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td>
                       {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => saveEdit(entry)}
-                            disabled={isSaving}
-                            id={`save-stock-${entry.id}`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-400 text-white text-xs font-medium transition-all disabled:opacity-50"
-                          >
-                            {isSaving ? (
-                              <div className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                            Save
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => saveEdit(entry)} disabled={isSaving} className="btn-primary" style={{ padding: "6px 14px", fontSize: "0.75rem" }}
+                            id={`save-stock-${entry.id}`}>
+                            {isSaving ? <div style={{ width: 11, height: 11, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.3)", borderTopColor: "white", animation: "spin 0.8s linear infinite" }} /> : "Save"}
                           </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition-all"
-                          >
-                            Cancel
-                          </button>
+                          <button onClick={cancelEdit} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.75rem" }}>Cancel</button>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => startEdit(entry)}
-                          id={`edit-stock-${entry.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-all"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                        <button onClick={() => startEdit(entry)} className="btn-edit" id={`edit-stock-${entry.id}`}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                           Edit
                         </button>
                       )}
@@ -257,10 +153,12 @@ export default function WarehouseStockPage() {
       </div>
 
       {!loading && !error && (
-        <p className="text-xs text-slate-500 text-right">
-          Showing {filtered.length} of {stockEntries.length} entries
+        <p style={{ fontSize: "0.6875rem", color: "#3d3a52", textAlign: "right", marginTop: 12, fontFamily: "var(--font-mono)" }}>
+          {filtered.length} / {stockEntries.length} entries
         </p>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

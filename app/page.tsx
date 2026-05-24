@@ -1,77 +1,374 @@
-import { getAuthSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
 import Link from "next/link";
+import { Hexagon, ArrowRight, Zap, Shield, Truck, Package } from "lucide-react";
+import AnimatedBackground from "@/components/canvas/AnimatedBackground";
 
-export default async function HomePage() {
-  const session = await getAuthSession();
-
-  // Redirect logged-in users to their role dashboard
-  if (session) {
-    const roleRedirects: Record<string, string> = {
-      ADMIN: "/admin/dashboard",
-      WAREHOUSE_MANAGER: "/warehouse/stock",
-      CUSTOMER: "/customer/products",
-      DELIVERY_AGENT: "/delivery/orders",
-    };
-    redirect(roleRedirects[session.user.role] || "/login");
-  }
-
-  // Landing page for unauthenticated users
+export default function HomePage() {
+  // Always show the landing page; let /login handle role selection
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Background glows */}
-      <div className="absolute -top-60 -left-60 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-60 -right-60 w-[500px] h-[500px] bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "transparent",
+        color: "#fff",
+        position: "relative",
+        overflowX: "hidden",
+      }}
+    >
+      {/* Layer 1 — Animated Drift Background */}
+      <AnimatedBackground />
 
-      {/* Logo */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl flex items-center justify-center">
-          <svg className="w-9 h-9 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
+      {/* ── Nav ── */}
+      <nav
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          padding: "0 40px",
+          height: 64,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          background: "rgba(0,0,0,0.85)",
+          backdropFilter: "blur(24px)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Hexagon size={18} color="#14b8a6" />
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: 12,
+              letterSpacing: "0.28em",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.9)",
+            }}
+          >
+            StockFlow
+          </span>
         </div>
-        <div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">StockFlow</h1>
-          <p className="text-slate-400 text-sm">Inventory Management · Allo Health</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link
+            href="/login"
+            style={{
+              fontSize: 13,
+              color: "rgba(255,255,255,0.45)",
+              textDecoration: "none",
+              padding: "7px 16px",
+              borderRadius: 6,
+              transition: "color 0.2s",
+            }}
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/register"
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#14b8a6",
+              textDecoration: "none",
+              padding: "7px 16px",
+              borderRadius: 6,
+              background: "rgba(20,184,166,0.1)",
+              border: "1px solid rgba(20,184,166,0.25)",
+              transition: "all 0.2s",
+            }}
+          >
+            Get Access
+          </Link>
         </div>
-      </div>
+      </nav>
 
-      <p className="text-slate-300 text-center text-lg max-w-xl mb-10 leading-relaxed">
-        A concurrency-safe inventory and reservation management system with role-based access, real-time stock tracking, and auto-expiring reservations.
-      </p>
-
-      {/* Feature grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10 w-full max-w-3xl">
-        {[
-          { label: "Role-Based Auth", icon: "🔐", desc: "4 roles, JWT sessions" },
-          { label: "SELECT FOR UPDATE", icon: "⚡", desc: "Concurrency-safe" },
-          { label: "Auto-Expiry Cron", icon: "⏱️", desc: "Every 1 minute" },
-          { label: "Redis Idempotency", icon: "🔄", desc: "24h key TTL" },
-        ].map((f) => (
-          <div key={f.label} className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 text-center backdrop-blur">
-            <div className="text-2xl mb-2">{f.icon}</div>
-            <p className="text-white text-xs font-semibold">{f.label}</p>
-            <p className="text-slate-500 text-xs mt-0.5">{f.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-3">
-        <Link
-          href="/login"
-          className="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5"
+      {/* ── Hero ── */}
+      <section
+        style={{
+          position: "relative",
+          zIndex: 10,
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "120px 24px 80px",
+        }}
+      >
+        {/* Badge */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 14px",
+            background: "rgba(20,184,166,0.06)",
+            border: "1px solid rgba(20,184,166,0.18)",
+            borderRadius: 100,
+            marginBottom: 32,
+          }}
         >
-          Sign In
-        </Link>
-        <Link
-          href="/register"
-          className="px-8 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/50 text-slate-300 font-semibold rounded-xl transition-all"
-        >
-          Create Account
-        </Link>
-      </div>
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: "#14b8a6",
+              boxShadow: "0 0 6px rgba(20,184,166,0.8)",
+              animation: "glow-pulse 2s ease-in-out infinite",
+              display: "inline-block",
+            }}
+          />
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: 10,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "rgba(20,184,166,0.8)",
+            }}
+          >
+            Production-Grade Inventory OS
+          </span>
+        </div>
 
-      <p className="mt-8 text-xs text-slate-600">Built for Allo Health · Assignment Submission</p>
+        <h1
+          style={{
+            fontSize: "clamp(3rem, 8vw, 6rem)",
+            fontWeight: 900,
+            letterSpacing: "-0.04em",
+            lineHeight: 0.95,
+            color: "#ffffff",
+            maxWidth: 900,
+            marginBottom: 24,
+          }}
+        >
+          Inventory
+          <br />
+          <span
+            style={{
+              color: "transparent",
+              backgroundImage:
+                "linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #f59e0b 100%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+            }}
+          >
+            Command
+          </span>
+          <br />
+          Redefined.
+        </h1>
+
+        <p
+          style={{
+            fontSize: "clamp(14px, 2vw, 18px)",
+            color: "rgba(255,255,255,0.4)",
+            maxWidth: 560,
+            lineHeight: 1.7,
+            marginBottom: 40,
+          }}
+        >
+          Concurrency-safe reservations. Real-time warehouse telemetry.
+          Role-based portals for every node in your supply chain.
+        </p>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+          <Link
+            href="/login"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "13px 28px",
+              borderRadius: 8,
+              background: "rgba(20,184,166,0.12)",
+              border: "1px solid rgba(20,184,166,0.3)",
+              color: "#14b8a6",
+              fontSize: 14,
+              fontWeight: 600,
+              textDecoration: "none",
+              boxShadow: "0 0 40px rgba(20,184,166,0.12)",
+              transition: "all 0.2s",
+            }}
+          >
+            Enter Command Center <ArrowRight size={16} />
+          </Link>
+          <Link
+            href="/register"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "13px 28px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 14,
+              fontWeight: 500,
+              textDecoration: "none",
+              transition: "all 0.2s",
+            }}
+          >
+            Create Account
+          </Link>
+        </div>
+
+        {/* Thin gradient line */}
+        <div
+          style={{
+            marginTop: 80,
+            width: "100%",
+            maxWidth: 800,
+            height: 1,
+            background:
+              "linear-gradient(90deg, transparent, rgba(20,184,166,0.3) 30%, rgba(245,158,11,0.3) 70%, transparent)",
+          }}
+        />
+      </section>
+
+      {/* ── Feature Grid ── */}
+      <section
+        id="features"
+        style={{
+          position: "relative",
+          zIndex: 10,
+          padding: "80px 40px",
+          maxWidth: 1100,
+          margin: "0 auto",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 1,
+            border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}
+        >
+          {[
+            {
+              icon: <Zap size={20} color="#14b8a6" />,
+              title: "Redis Reservations",
+              desc: "Sub-5ms pessimistic locking prevents overselling under extreme concurrent load.",
+              color: "#14b8a6",
+            },
+            {
+              icon: <Shield size={20} color="#f59e0b" />,
+              title: "Role-Based Access",
+              desc: "Admin, Customer, Warehouse Manager, and Delivery Agent portals with enforced session guards.",
+              color: "#f59e0b",
+            },
+            {
+              icon: <Package size={20} color="#a78bfa" />,
+              title: "Multi-Warehouse",
+              desc: "Distributed stock across warehouses with per-location availability tracking.",
+              color: "#a78bfa",
+            },
+            {
+              icon: <Truck size={20} color="#60a5fa" />,
+              title: "Fulfillment Pipeline",
+              desc: "End-to-end order lifecycle from reservation to confirmed delivery.",
+              color: "#60a5fa",
+            },
+          ].map((feature, i) => (
+            <div
+              key={i}
+              style={{
+                padding: "36px 28px",
+                background: "rgba(0,0,0,0.75)",
+                backdropFilter: "blur(20px)",
+                borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none",
+                position: "relative",
+                overflow: "hidden",
+                transition: "background 0.2s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(0,0,0,0.6)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "rgba(0,0,0,0.75)")
+              }
+            >
+              {/* Top accent */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 1,
+                  background: `linear-gradient(90deg, transparent, ${feature.color}30, transparent)`,
+                }}
+              />
+              <div style={{ marginBottom: 16 }}>{feature.icon}</div>
+              <h3
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  marginBottom: 8,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {feature.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "rgba(255,255,255,0.35)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {feature.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer
+        style={{
+          position: "relative",
+          zIndex: 10,
+          padding: "32px 40px",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Hexagon size={14} color="rgba(255,255,255,0.2)" />
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: 10,
+              letterSpacing: "0.15em",
+              color: "rgba(255,255,255,0.25)",
+            }}
+          >
+            STOCKFLOW · ALLO HEALTH
+          </span>
+        </div>
+        <p
+          style={{
+            fontFamily: "monospace",
+            fontSize: 10,
+            color: "rgba(255,255,255,0.2)",
+          }}
+        >
+          © 2026
+        </p>
+      </footer>
     </div>
   );
 }

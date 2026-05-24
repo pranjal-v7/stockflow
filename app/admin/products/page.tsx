@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import StockBadge from "@/components/admin/StockBadge";
+import { motion, AnimatePresence } from "framer-motion";
+import { Package, Plus, Search, Edit2, Trash2, MoreHorizontal } from "lucide-react";
+import GlowLine from "@/components/ui/GlowLine";
 
 interface Product {
   id: string;
@@ -11,241 +13,239 @@ interface Product {
   category: string;
   price: number;
   description?: string;
-  stockEntries?: { totalUnits: number; availableUnits: number }[];
+  stockEntries?: { totalUnits: number; reservedUnits: number }[];
+}
+
+function getAvailable(p: Product) {
+  return p.stockEntries?.reduce((s, e) => s + Math.max(0, e.totalUnits - e.reservedUnits), 0) ?? 0;
+}
+function getTotal(p: Product) {
+  return p.stockEntries?.reduce((s, e) => s + e.totalUnits, 0) ?? 0;
 }
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/products");
-      if (!res.ok) throw new Error("Failed to fetch products");
-      const data = await res.json();
-      setProducts(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    const res = await fetch("/api/products");
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : []);
+    setLoading(false);
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  useEffect(() => { fetchProducts(); }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Delete this product?")) return;
     setDeletingId(id);
-    try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      alert("Failed to delete product.");
-    } finally {
-      setDeletingId(null);
-    }
+    await fetch(`/api/products/${id}`, { method: "DELETE" });
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    setDeletingId(null);
   };
 
-  const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      p.category?.toLowerCase().includes(search.toLowerCase())
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.sku.toLowerCase().includes(search.toLowerCase()) ||
+    p.category?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getTotalStock = (product: Product) =>
-    product.stockEntries?.reduce((s, e) => s + e.totalUnits, 0) ?? 0;
-
-  const getAvailableStock = (product: Product) =>
-    product.stockEntries?.reduce((s, e) => s + e.availableUnits, 0) ?? 0;
-
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Product Catalog</h2>
-          <p className="text-sm text-slate-400 mt-0.5">
-            Manage your inventory products and SKUs
-          </p>
-        </div>
-        <Link
-          href="/admin/products/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Product
-        </Link>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Total Products", value: products.length, color: "emerald" },
-          {
-            label: "Total Stock Units",
-            value: products.reduce((s, p) => s + getTotalStock(p), 0),
-            color: "blue",
-          },
-          {
-            label: "Available Units",
-            value: products.reduce((s, p) => s + getAvailableStock(p), 0),
-            color: "violet",
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-slate-800 border border-slate-700 rounded-xl px-5 py-4"
-          >
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{stat.label}</p>
-            <p className="text-3xl font-bold text-white mt-1">{stat.value.toLocaleString()}</p>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+              <Package size={20} color="#14b8a6" />
+              <h1 style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#fff" }}>Products</h1>
+            </div>
+            <p className="font-mono-custom" style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em" }}>
+              {filtered.length} PRODUCT{filtered.length !== 1 ? "S" : ""} IN CATALOG
+            </p>
           </div>
-        ))}
-      </div>
+          <Link
+            href="/admin/products/new"
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "9px 18px", borderRadius: 7,
+              background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.3)",
+              color: "#14b8a6", fontSize: 13, fontWeight: 600, textDecoration: "none",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(20,184,166,0.2)"; e.currentTarget.style.boxShadow = "0 0 20px rgba(20,184,166,0.15)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(20,184,166,0.12)"; e.currentTarget.style.boxShadow = "none"; }}
+          >
+            <Plus size={14} /> Add Product
+          </Link>
+        </div>
+        <div style={{ marginTop: 16, height: 1, background: "linear-gradient(90deg, rgba(20,184,166,0.4), rgba(255,255,255,0.06) 40%, transparent)" }} />
+      </motion.div>
 
       {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search by name, SKU or category..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition"
-        />
-      </div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} style={{ marginBottom: 24 }}>
+        <div className="glass" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderRadius: 8, maxWidth: 400 }}>
+          <Search size={14} color="rgba(255,255,255,0.3)" />
+          <input
+            type="text"
+            placeholder="Search products, SKUs, categories…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontSize: 13 }}
+          />
+        </div>
+      </motion.div>
 
-      {/* Table */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-slate-400">Loading products...</p>
-            </div>
+      {/* Table-style list */}
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="glass" style={{ height: 72, borderRadius: 8, animation: "glow-pulse 1.5s ease-in-out infinite" }} />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Column headers */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 120px 110px 120px 100px 110px",
+            padding: "8px 16px", marginBottom: 8,
+          }}>
+            {["Product", "SKU", "Category", "Price", "Stock", "Actions"].map((h) => (
+              <span key={h} className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>
+                {h}
+              </span>
+            ))}
           </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center">
-              <p className="text-red-400 font-medium">{error}</p>
-              <button
-                onClick={fetchProducts}
-                className="mt-3 text-xs text-slate-400 hover:text-white underline"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <p className="text-slate-400 text-sm">No products found</p>
-            <Link href="/admin/products/new" className="text-xs text-emerald-400 hover:underline">
-              Add your first product →
-            </Link>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-700">
-                {["Name", "SKU", "Category", "Price", "Total Stock", "Available", "Actions"].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3.5 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {filtered.map((product) => {
-                const total = getTotalStock(product);
-                const available = getAvailableStock(product);
-                return (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-slate-700/30 transition-colors group"
-                  >
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-white group-hover:text-emerald-300 transition-colors">
-                        {product.name}
+
+          {filtered.length === 0 ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass" style={{ textAlign: "center", padding: "52px 24px", borderRadius: 10 }}>
+              <Package size={28} color="rgba(255,255,255,0.1)" style={{ margin: "0 auto 12px" }} />
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14 }}>No products found</p>
+            </motion.div>
+          ) : (
+            <AnimatePresence>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {filtered.map((product, idx) => {
+                  const avail = getAvailable(product);
+                  const total = getTotal(product);
+                  const pct = total > 0 ? (avail / total) * 100 : 0;
+                  const stockColor = pct > 50 ? "teal" : pct > 20 ? "amber" : "white";
+
+                  return (
+                    <motion.div
+                      key={product.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ delay: idx * 0.03, duration: 0.3 }}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 120px 110px 120px 100px 110px",
+                        alignItems: "center",
+                        padding: "14px 16px",
+                        borderRadius: 8,
+                        background: "rgba(0,0,0,0.25)",
+                        border: "1px solid rgba(255,255,255,0.05)",
+                        transition: "border-color 0.15s, background 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)";
+                        e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)";
+                        e.currentTarget.style.background = "rgba(0,0,0,0.25)";
+                      }}
+                    >
+                      {/* Name */}
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 2 }}>{product.name}</p>
+                        {product.description && (
+                          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
+                            {product.description}
+                          </p>
+                        )}
                       </div>
-                      {product.description && (
-                        <div className="text-xs text-slate-500 mt-0.5 truncate max-w-[180px]">
-                          {product.description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <code className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-mono">
+
+                      {/* SKU */}
+                      <span className="font-mono-custom" style={{ fontSize: 11, color: "rgba(20,184,166,0.7)" }}>
                         {product.sku}
-                      </code>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="text-xs bg-slate-700/50 text-slate-300 border border-slate-600 px-2.5 py-1 rounded-full">
+                      </span>
+
+                      {/* Category */}
+                      <span style={{
+                        fontSize: 10, padding: "3px 8px", borderRadius: 4,
+                        background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
+                        color: "rgba(255,255,255,0.5)", width: "fit-content",
+                      }}>
                         {product.category || "—"}
                       </span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-300 font-medium">
-                      ₹{Number(product.price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-5 py-4 text-slate-300">{total.toLocaleString()}</td>
-                    <td className="px-5 py-4">
-                      <StockBadge available={available} total={total} />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
+
+                      {/* Price */}
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", letterSpacing: "-0.02em" }}>
+                        ₹{product.price.toLocaleString("en-IN")}
+                      </span>
+
+                      {/* Stock */}
+                      <div style={{ width: 80 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="font-mono-custom" style={{ fontSize: 9, color: pct === 0 ? "#ef4444" : pct <= 30 ? "#f59e0b" : "#14b8a6" }}>
+                            {avail}/{total}
+                          </span>
+                        </div>
+                        <GlowLine value={pct} color={stockColor} />
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: "flex", gap: 6 }}>
                         <Link
                           href={`/admin/products/${product.id}/edit`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-all"
+                          style={{
+                            width: 30, height: 30, borderRadius: 6,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
+                            color: "rgba(255,255,255,0.4)", textDecoration: "none",
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(20,184,166,0.3)"; e.currentTarget.style.color = "#14b8a6"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = "rgba(255,255,255,0.4)"; }}
+                          title="Edit"
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Edit
+                          <Edit2 size={12} />
                         </Link>
                         <button
                           onClick={() => handleDelete(product.id)}
                           disabled={deletingId === product.id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-medium transition-all disabled:opacity-50"
+                          style={{
+                            width: 30, height: 30, borderRadius: 6,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)",
+                            color: "rgba(239,68,68,0.5)", cursor: "pointer",
+                            fontFamily: "inherit",
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)"; e.currentTarget.style.color = "#ef4444"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(239,68,68,0.12)"; e.currentTarget.style.color = "rgba(239,68,68,0.5)"; }}
+                          title="Delete"
                         >
                           {deletingId === product.id ? (
-                            <div className="w-3.5 h-3.5 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                            <div style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid rgba(239,68,68,0.3)", borderTopColor: "#ef4444", animation: "spin 0.8s linear infinite" }} />
                           ) : (
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            <Trash2 size={12} />
                           )}
-                          Delete
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {!loading && !error && (
-        <p className="text-xs text-slate-500 text-right">
-          Showing {filtered.length} of {products.length} products
-        </p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </AnimatePresence>
+          )}
+        </>
       )}
     </div>
   );

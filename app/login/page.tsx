@@ -2,137 +2,399 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { Hexagon, Shield, ShoppingCart, Warehouse, Truck, ArrowRight } from "lucide-react";
+import AnimatedBackground from "@/components/canvas/AnimatedBackground";
+
+const PORTALS = [
+  {
+    role: "ADMIN",
+    label: "Admin",
+    sublabel: "Command Center",
+    desc: "Full system oversight. Manage products, warehouses, orders, and live telemetry.",
+    icon: Shield,
+    color: "#14b8a6",
+    glow: "rgba(20,184,166,0.18)",
+    border: "rgba(20,184,166,0.25)",
+    href: "/admin/dashboard",
+    email: "admin@allohealth.com",
+    password: "password123",
+  },
+  {
+    role: "CUSTOMER",
+    label: "Customer",
+    sublabel: "Procurement Portal",
+    desc: "Browse inventory, reserve products, and track your orders end-to-end.",
+    icon: ShoppingCart,
+    color: "#f59e0b",
+    glow: "rgba(245,158,11,0.15)",
+    border: "rgba(245,158,11,0.25)",
+    href: "/customer/products",
+    email: "customer@allohealth.com",
+    password: "password123",
+  },
+  {
+    role: "WAREHOUSE_MANAGER",
+    label: "Warehouse",
+    sublabel: "Stock Manager",
+    desc: "Monitor and update stock levels, process fulfillment, and manage warehouse orders.",
+    icon: Warehouse,
+    color: "#60a5fa",
+    glow: "rgba(96,165,250,0.15)",
+    border: "rgba(96,165,250,0.25)",
+    href: "/warehouse/stock",
+    email: "warehouse@allohealth.com",
+    password: "password123",
+  },
+  {
+    role: "DELIVERY_AGENT",
+    label: "Delivery",
+    sublabel: "Dispatch Hub",
+    desc: "View assigned routes, track active shipments, and confirm order deliveries.",
+    icon: Truck,
+    color: "#a78bfa",
+    glow: "rgba(167,139,250,0.15)",
+    border: "rgba(167,139,250,0.25)",
+    href: "/delivery/orders",
+    email: "delivery@allohealth.com",
+    password: "password123",
+  },
+];
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loadingRole, setLoadingRole] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSelect = async (portal: (typeof PORTALS)[0]) => {
+    setLoadingRole(portal.role);
     setError("");
 
     const result = await signIn("credentials", {
-      email,
-      password,
+      email: portal.email,
+      password: portal.password,
       redirect: false,
     });
 
     if (result?.error) {
-      setError("Invalid email or password");
-      setLoading(false);
+      setError(`Could not sign in as ${portal.label}. Check that the database is seeded.`);
+      setLoadingRole(null);
       return;
     }
 
-    // Redirect based on role via the home page router
-    router.push(callbackUrl);
-    router.refresh();
+    router.push(portal.href);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-      </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "transparent",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "40px 24px",
+        overflowX: "hidden",
+      }}
+    >
+      {/* Layer 1 — Animated Drift Background */}
+      <AnimatedBackground />
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo / Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl mb-4">
-            <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
+      {/* Layer 2 — Content */}
+      <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 900 }}>
+        {/* ── Logo / Header ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          style={{ textAlign: "center", marginBottom: 56 }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: "rgba(20,184,166,0.08)",
+              border: "1px solid rgba(20,184,166,0.2)",
+              marginBottom: 20,
+              boxShadow: "0 0 40px rgba(20,184,166,0.12)",
+            }}
+          >
+            <Hexagon size={26} color="#14b8a6" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">StockFlow</h1>
-          <p className="text-slate-400 mt-1 text-sm">Inventory Management · Allo Health</p>
-        </div>
 
-        {/* Card */}
-        <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-white mb-6">Sign in to your account</h2>
+          <h1
+            className="font-mono-custom"
+            style={{
+              fontSize: 12,
+              letterSpacing: "0.35em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.9)",
+              fontWeight: 600,
+              marginBottom: 8,
+            }}
+          >
+            StockFlow
+          </h1>
 
+          <h2
+            style={{
+              fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
+              fontWeight: 800,
+              letterSpacing: "-0.035em",
+              color: "#ffffff",
+              lineHeight: 1.1,
+              marginBottom: 12,
+            }}
+          >
+            Choose your portal
+          </h2>
+
+          <p
+            style={{
+              fontSize: 14,
+              color: "rgba(255,255,255,0.35)",
+              maxWidth: 400,
+              margin: "0 auto",
+              lineHeight: 1.6,
+            }}
+          >
+            Select a role to enter the corresponding command interface.
+          </p>
+        </motion.div>
+
+        {/* ── Error banner ── */}
+        <AnimatePresence>
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email address</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="you@allohealth.com"
-                className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-
-            <button
-              id="login-btn"
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              style={{
+                maxWidth: 560,
+                margin: "0 auto 24px",
+                padding: "12px 16px",
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                borderRadius: 8,
+                fontSize: 13,
+                color: "#f87171",
+                textAlign: "center",
+              }}
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Portal cards grid ── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {PORTALS.map((portal, idx) => {
+            const Icon = portal.icon;
+            const isLoading = loadingRole === portal.role;
+            const isDisabled = loadingRole !== null && !isLoading;
+
+            return (
+              <motion.button
+                key={portal.role}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + idx * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => handleSelect(portal)}
+                disabled={loadingRole !== null}
+                whileHover={!loadingRole ? { y: -4, transition: { duration: 0.2 } } : {}}
+                whileTap={!loadingRole ? { scale: 0.98 } : {}}
+                style={{
+                  position: "relative",
+                  padding: "32px 24px",
+                  background: isLoading
+                    ? `${portal.glow.replace("0.15", "0.1")}`
+                    : "rgba(0,0,0,0.75)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: `1px solid ${isLoading ? portal.border : "rgba(255,255,255,0.07)"}`,
+                  borderRadius: 12,
+                  cursor: loadingRole !== null ? "default" : "pointer",
+                  textAlign: "left",
+                  fontFamily: "inherit",
+                  opacity: isDisabled ? 0.4 : 1,
+                  transition: "opacity 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s",
+                  boxShadow: isLoading
+                    ? `0 0 40px ${portal.glow}, 0 0 80px ${portal.glow.replace("0.15", "0.06")}`
+                    : "none",
+                  outline: "none",
+                }}
+                onMouseEnter={(e) => {
+                  if (loadingRole) return;
+                  e.currentTarget.style.borderColor = portal.border;
+                  e.currentTarget.style.background = portal.glow.replace("0.15", "0.65");
+                  e.currentTarget.style.boxShadow = `0 0 40px ${portal.glow.replace("0.15", "0.1")}`;
+                }}
+                onMouseLeave={(e) => {
+                  if (loadingRole) return;
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                  e.currentTarget.style.background = "rgba(0,0,0,0.75)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {/* Top accent line */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 1,
+                    background: `linear-gradient(90deg, transparent, ${portal.color}60, transparent)`,
+                    borderRadius: "12px 12px 0 0",
+                  }}
+                />
+
+                {/* Corner + markers */}
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    left: 10,
+                    fontSize: 11,
+                    color: `${portal.color}40`,
+                    fontFamily: "monospace",
+                    lineHeight: 1,
+                  }}
+                  aria-hidden
+                >
+                  +
                 </span>
-              ) : "Sign in"}
-            </button>
-          </form>
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: 8,
+                    right: 10,
+                    fontSize: 11,
+                    color: `${portal.color}40`,
+                    fontFamily: "monospace",
+                    lineHeight: 1,
+                  }}
+                  aria-hidden
+                >
+                  +
+                </span>
 
-          <div className="mt-6 pt-6 border-t border-slate-700/50">
-            <p className="text-sm text-slate-400 text-center">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                Create account
-              </Link>
-            </p>
-          </div>
+                {/* Icon */}
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: `${portal.color}12`,
+                    border: `1px solid ${portal.color}25`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 20,
+                  }}
+                >
+                  {isLoading ? (
+                    <div
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        border: `2px solid ${portal.color}30`,
+                        borderTopColor: portal.color,
+                        animation: "spin 0.8s linear infinite",
+                      }}
+                    />
+                  ) : (
+                    <Icon size={18} color={portal.color} />
+                  )}
+                </div>
 
-          {/* Demo credentials */}
-          <div className="mt-4 p-3 bg-slate-700/30 rounded-xl border border-slate-600/30">
-            <p className="text-xs text-slate-400 font-medium mb-2">Demo credentials</p>
-            <div className="space-y-1 text-xs text-slate-500">
-              <p><span className="text-slate-400">Admin:</span> admin@allohealth.com</p>
-              <p><span className="text-slate-400">Warehouse:</span> warehouse@allohealth.com</p>
-              <p><span className="text-slate-400">Customer:</span> customer@allohealth.com</p>
-              <p><span className="text-slate-400">Delivery:</span> delivery@allohealth.com</p>
-              <p className="mt-1"><span className="text-slate-400">Password:</span> password123</p>
-            </div>
-          </div>
+                {/* Labels */}
+                <p
+                  className="font-mono-custom"
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: portal.color,
+                    marginBottom: 4,
+                    opacity: 0.8,
+                  }}
+                >
+                  {portal.sublabel}
+                </p>
+                <h3
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: "#ffffff",
+                    letterSpacing: "-0.02em",
+                    marginBottom: 10,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {isLoading ? "Entering…" : portal.label}
+                </h3>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.35)",
+                    lineHeight: 1.6,
+                    marginBottom: 20,
+                  }}
+                >
+                  {portal.desc}
+                </p>
+
+                {/* Enter arrow */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: portal.color,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {isLoading ? "Authenticating" : "Enter portal"}
+                  <ArrowRight size={12} />
+                </div>
+              </motion.button>
+            );
+          })}
         </div>
+
+        {/* ── Footer note ── */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+          className="font-mono-custom"
+          style={{
+            textAlign: "center",
+            marginTop: 40,
+            fontSize: 10,
+            letterSpacing: "0.12em",
+            color: "rgba(255,255,255,0.2)",
+          }}
+        >
+          STOCKFLOW · ALLO HEALTH · OPERATIONS COMMAND
+        </motion.p>
       </div>
     </div>
   );

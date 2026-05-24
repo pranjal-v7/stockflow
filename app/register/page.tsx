@@ -3,17 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { Hexagon, ArrowRight } from "lucide-react";
+import GlassCard from "@/components/ui/GlassCard";
+import AnimatedBackground from "@/components/canvas/AnimatedBackground";
 
-const roles = [
-  { value: "CUSTOMER", label: "Customer", desc: "Browse & reserve products", color: "border-violet-500/50 bg-violet-500/10 text-violet-300" },
-  { value: "WAREHOUSE_MANAGER", label: "Warehouse Manager", desc: "Stock & fulfillment", color: "border-emerald-500/50 bg-emerald-500/10 text-emerald-300" },
-  { value: "ADMIN", label: "Admin", desc: "Full system control", color: "border-amber-500/50 bg-amber-500/10 text-amber-300" },
-  { value: "DELIVERY_AGENT", label: "Delivery Agent", desc: "Order dispatch", color: "border-orange-500/50 bg-orange-500/10 text-orange-300" },
+const ROLES = [
+  { value: "CUSTOMER",          label: "Customer",   desc: "Browse & reserve",   color: "#f59e0b" },
+  { value: "WAREHOUSE_MANAGER", label: "Manager",    desc: "Stock & fulfillment", color: "#14b8a6" },
+  { value: "ADMIN",             label: "Admin",      desc: "Full oversight",      color: "#a78bfa" },
+  { value: "DELIVERY_AGENT",    label: "Delivery",   desc: "Order dispatch",      color: "#60a5fa" },
 ];
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "CUSTOMER" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "CUSTOMER" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,132 +25,126 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error || "Registration failed");
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Registration failed"); return; }
+      router.push("/login?registered=true");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/login?registered=true");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
-      </div>
+    <div style={{ minHeight: "100vh", backgroundColor: "transparent", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <AnimatedBackground />
 
-      <div className="w-full max-w-lg relative z-10">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl mb-4">
-            <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        style={{ width: "100%", maxWidth: 440, position: "relative", zIndex: 10 }}
+      >
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: 12, background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", marginBottom: 14, boxShadow: "0 0 30px rgba(20,184,166,0.15)" }}>
+            <Hexagon size={24} color="#14b8a6" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">StockFlow</h1>
-          <p className="text-slate-400 mt-1 text-sm">Inventory Management · Allo Health</p>
+          <h1 className="font-mono-custom" style={{ fontSize: 13, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>StockFlow</h1>
+          <p className="font-mono-custom" style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>Create Account</p>
         </div>
 
-        <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-white mb-6">Create your account</h2>
+        <GlassCard accent="teal" animate={false}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", marginBottom: 4, letterSpacing: "-0.02em" }}>Join StockFlow</h2>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 24 }}>Select your role and create credentials</p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">{error}</div>
+            <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, fontSize: 12, color: "#f87171", marginBottom: 16 }}>
+              {error}
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Full name</label>
-              <input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                placeholder="John Doe"
-                className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email address</label>
-              <input
-                id="reg-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                placeholder="you@allohealth.com"
-                className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
-              <input
-                id="reg-password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Role selection */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Select role</label>
-              <div className="grid grid-cols-2 gap-2">
-                {roles.map((r) => (
+              <label className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 8 }}>Identity Role</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {ROLES.map((r) => (
                   <button
                     key={r.value}
                     type="button"
                     id={`role-${r.value.toLowerCase()}`}
-                    onClick={() => setFormData({ ...formData, role: r.value })}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      formData.role === r.value
-                        ? r.color + " border-2"
-                        : "border-slate-600/50 bg-slate-700/30 text-slate-400 hover:border-slate-500/50"
-                    }`}
+                    onClick={() => setForm({ ...form, role: r.value })}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 7,
+                      background: form.role === r.value ? `${r.color}12` : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${form.role === r.value ? r.color + "40" : "rgba(255,255,255,0.07)"}`,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      transition: "all 0.15s",
+                    }}
                   >
-                    <p className="font-medium text-sm">{r.label}</p>
-                    <p className="text-xs opacity-70 mt-0.5">{r.desc}</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: form.role === r.value ? r.color : "rgba(255,255,255,0.6)" }}>{r.label}</p>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{r.desc}</p>
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Name */}
+            <div>
+              <label className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 6 }}>Full Name</label>
+              <input id="name" type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe"
+                style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, color: "#ffffff", fontSize: 13, outline: "none", transition: "border-color 0.2s" }}
+                onFocus={(e) => (e.target.style.borderColor = "rgba(20,184,166,0.4)")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 6 }}>Email Address</label>
+              <input id="reg-email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@allohealth.care"
+                style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, color: "#ffffff", fontSize: 13, outline: "none", transition: "border-color 0.2s" }}
+                onFocus={(e) => (e.target.style.borderColor = "rgba(20,184,166,0.4)")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="font-mono-custom" style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 6 }}>Password</label>
+              <input id="reg-password" type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••"
+                style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, color: "#ffffff", fontSize: 13, outline: "none", transition: "border-color 0.2s" }}
+                onFocus={(e) => (e.target.style.borderColor = "rgba(20,184,166,0.4)")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+              />
             </div>
 
             <button
               id="register-btn"
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 mt-2"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 7, background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.3)", color: "#14b8a6", fontSize: 13, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: "0 0 20px rgba(20,184,166,0.1)", marginTop: 4 }}
             >
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? <div style={{ width: 14, height: 14, border: "2px solid rgba(20,184,166,0.3)", borderTopColor: "#14b8a6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <>Create Account <ArrowRight size={14} /></>}
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-700/50 text-center">
-            <p className="text-sm text-slate-400">
-              Already have an account?{" "}
-              <Link href="/login" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                Sign in
-              </Link>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)", textAlign: "center" }}>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+              Have an account?{" "}
+              <Link href="/login" style={{ color: "#14b8a6", fontWeight: 600, textDecoration: "none" }}>Sign in</Link>
             </p>
           </div>
-        </div>
-      </div>
+        </GlassCard>
+      </motion.div>
     </div>
   );
 }
